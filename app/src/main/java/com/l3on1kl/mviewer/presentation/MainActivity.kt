@@ -7,12 +7,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.l3on1kl.mviewer.R
-import com.l3on1kl.mviewer.data.AssetsMarkdownRepository
-import com.l3on1kl.mviewer.domain.GetMarkdownUseCase
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var viewModel: MainViewModel
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -23,11 +19,7 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-        val repository = AssetsMarkdownRepository(this)
-        val useCase = GetMarkdownUseCase(repository)
-        viewModel = MainViewModel(useCase)
-
         val textView: TextView = findViewById(R.id.content)
-        textView.text = viewModel.loadMarkdown()
+        textView.text = "Hello"
     }
 }
