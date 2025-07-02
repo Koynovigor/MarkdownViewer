@@ -3,9 +3,6 @@
     <string name="enter_url">Enter URL</string>
     <string name="choose_file">Choose File</string>
     <string name="load_url">Load URL</string>
-    <string name="prev">Prev</string>
-    <string name="next">Next</string>
-    <string name="page_x_of_y">%1$d / %2$d</string>
     <string name="open_with">Open with…</string>
     <string name="imagefile">imageFile</string>
     <string name="tab_preview">Preview</string>

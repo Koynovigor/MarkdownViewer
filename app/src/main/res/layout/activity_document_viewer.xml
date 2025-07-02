@@ -35,43 +35,7 @@
                 android:layout_height="wrap_content"
                 android:textAppearance="?attr/textAppearanceBody1" />
         </ScrollView>
-
-        <ImageView
-            android:id="@+id/imageView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:contentDescription="@string/imagefile"
-            android:scaleType="fitCenter"
-            android:visibility="gone" />
     </FrameLayout>
-
-    <LinearLayout
-        android:id="@+id/pageControls"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:orientation="horizontal"
-        android:visibility="gone">
-
-        <Button
-            android:id="@+id/prevButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/prev" />
-
-        <TextView
-            android:id="@+id/pageIndicator"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp" />
-
-        <Button
-            android:id="@+id/nextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/next" />
-    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/editorLayout"

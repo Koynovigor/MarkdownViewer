@@ -27,7 +27,6 @@ class DocumentViewerActivity : AppCompatActivity(R.layout.activity_document_view
     private lateinit var binding: ActivityDocumentViewerBinding
     private var document: MarkdownDocument? = null
     private var pendingContent: String? = null
-    private var lastState: DocumentViewerUiState? = null
 
     private val createDocumentLauncher =
         registerForActivityResult(ActivityResultContracts.CreateDocument("text/markdown")) { uri ->
@@ -85,10 +84,8 @@ class DocumentViewerActivity : AppCompatActivity(R.layout.activity_document_view
                 if (index == 0) {
                     binding.previewLayout.isVisible = true
                     binding.editorLayout.isVisible = false
-                    binding.pageControls.isVisible = lastState is DocumentViewerUiState.Pdf
                 } else {
                     binding.previewLayout.isVisible = false
-                    binding.pageControls.isVisible = false
                     binding.editorLayout.isVisible = true
                 }
             }
@@ -96,9 +93,6 @@ class DocumentViewerActivity : AppCompatActivity(R.layout.activity_document_view
             override fun onTabUnselected(tab: com.google.android.material.tabs.TabLayout.Tab?) {}
             override fun onTabReselected(tab: com.google.android.material.tabs.TabLayout.Tab?) {}
         })
-
-        binding.nextButton.setOnClickListener { viewModel.nextPage() }
-        binding.prevButton.setOnClickListener { viewModel.prevPage() }
 
         binding.saveButton.setOnClickListener {
             val content = binding.editText.text.toString()
@@ -120,31 +114,15 @@ class DocumentViewerActivity : AppCompatActivity(R.layout.activity_document_view
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { state ->
-                    lastState = state
                     when (state) {
                         is DocumentViewerUiState.Text -> {
                             binding.scrollView.isVisible = true
-                            binding.imageView.isVisible = false
-                            binding.pageControls.isVisible = false
                             binding.contentText.text = state.text
                             binding.editText.setText(state.text)
                         }
 
-                        is DocumentViewerUiState.Pdf -> {
-                            binding.scrollView.isVisible = false
-                            binding.imageView.isVisible = true
-                            binding.pageControls.isVisible = true
-                            binding.imageView.setImageBitmap(state.bitmap)
-                            binding.pageIndicator.text =
-                                getString(R.string.page_x_of_y, state.page, state.pageCount)
-                            binding.prevButton.isEnabled = state.page > 1
-                            binding.nextButton.isEnabled = state.page < state.pageCount
-                        }
-
                         is DocumentViewerUiState.Error -> {
                             binding.scrollView.isVisible = true
-                            binding.imageView.isVisible = false
-                            binding.pageControls.isVisible = false
                             binding.contentText.text = state.throwable.message
                         }
 
