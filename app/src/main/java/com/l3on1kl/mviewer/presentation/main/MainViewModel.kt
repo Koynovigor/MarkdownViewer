@@ -10,7 +10,8 @@ import com.l3on1kl.mviewer.domain.model.MarkdownElement
 import com.l3on1kl.mviewer.domain.repository.LoadRequest
 import com.l3on1kl.mviewer.domain.usecase.LoadDocumentUseCase
 import com.l3on1kl.mviewer.domain.usecase.ParseMarkdownUseCase
-import com.l3on1kl.mviewer.domain.usecase.SaveDocumentUseCase
+import com.l3on1kl.mviewer.presentation.model.DocumentArgs
+import com.l3on1kl.mviewer.presentation.model.toArgs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,7 +28,6 @@ import javax.inject.Inject
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val loadDoc: LoadDocumentUseCase,
-    private val saveDoc: SaveDocumentUseCase,
     private val parseMd: ParseMarkdownUseCase
 ) : ViewModel() {
 
@@ -35,7 +35,7 @@ class MainViewModel @Inject constructor(
         object Idle : UiState
         object Loading : UiState
         data class Success(
-            val doc: MarkdownDocument,
+            val doc: DocumentArgs,
             val elements: List<MarkdownElement>,
             val uri: Uri?
         ) : UiState
@@ -49,7 +49,7 @@ class MainViewModel @Inject constructor(
     /** Вызывает загрузку локального файла (SAF) */
     fun onLocalFileSelected(uri: Uri) = viewModelScope.launch {
         _uiState.value = UiState.Loading
-        val result = loadDoc(LoadRequest.Local(uri))
+        val result = loadDoc(LoadRequest.Local(uri.toString()))
         handleResult(result, uri)
     }
 
@@ -75,7 +75,7 @@ class MainViewModel @Inject constructor(
         _uiState.value = result.fold(
             onSuccess = { doc ->
                 val elements = parseMd(doc.content)
-                UiState.Success(doc, elements, uri)
+                UiState.Success(doc.toArgs(), elements, uri)
             },
             onFailure = {
                 Log.e("MainViewModel", "Error loading document", it)
@@ -86,10 +86,5 @@ class MainViewModel @Inject constructor(
 
     fun resetToIdle() {
         _uiState.value = UiState.Idle
-    }
-
-    /** Сохранение правок */
-    fun onSave(doc: MarkdownDocument) = viewModelScope.launch {
-        saveDoc(doc)
     }
 }

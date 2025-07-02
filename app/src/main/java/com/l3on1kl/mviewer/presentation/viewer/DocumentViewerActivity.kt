@@ -14,6 +14,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.l3on1kl.mviewer.R
 import com.l3on1kl.mviewer.databinding.ActivityDocumentViewerBinding
 import com.l3on1kl.mviewer.domain.model.MarkdownDocument
+import com.l3on1kl.mviewer.presentation.model.DocumentArgs
+import com.l3on1kl.mviewer.presentation.model.toDomain
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -57,13 +59,14 @@ class DocumentViewerActivity : AppCompatActivity(R.layout.activity_document_view
             } else false
         }
 
-        val doc: MarkdownDocument? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            intent.getParcelableExtra(EXTRA_DOCUMENT, MarkdownDocument::class.java)
+        val args: DocumentArgs? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra(EXTRA_DOCUMENT, DocumentArgs::class.java)
         } else {
             @Suppress("DEPRECATION")
             intent.getParcelableExtra(EXTRA_DOCUMENT)
         }
 
+        val doc = args?.toDomain()
         if (doc != null) {
             document = doc
             viewModel.load(doc)

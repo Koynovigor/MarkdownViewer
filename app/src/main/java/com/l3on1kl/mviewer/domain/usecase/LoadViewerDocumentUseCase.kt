@@ -1,6 +1,5 @@
 package com.l3on1kl.mviewer.domain.usecase
 
-import android.net.Uri
 import com.l3on1kl.mviewer.domain.model.MarkdownDocument
 import com.l3on1kl.mviewer.domain.repository.DocumentRepository
 import com.l3on1kl.mviewer.domain.repository.LoadRequest
@@ -15,15 +14,15 @@ class LoadViewerDocumentUseCase @Inject constructor(
 ) {
     sealed interface Result {
         data class Text(val text: String) : Result
-        data class Pdf(val uri: Uri) : Result
+        data class Pdf(val path: String) : Result
     }
 
-    suspend operator fun invoke(uri: Uri): Result =
-        if (uri.toString().endsWith(".pdf", true)) {
-            Result.Pdf(uri)
+    suspend operator fun invoke(path: String): Result =
+        if (path.endsWith(".pdf", true)) {
+            Result.Pdf(path)
         } else {
             val doc: MarkdownDocument = repository.load(
-                LoadRequest.Local(uri)
+                LoadRequest.Local(path)
             )
             Result.Text(doc.content)
         }

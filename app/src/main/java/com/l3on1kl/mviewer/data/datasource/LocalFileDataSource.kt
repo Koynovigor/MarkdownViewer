@@ -16,7 +16,7 @@ class LocalFileDataSource @Inject constructor(
         request is LoadRequest.Local
 
     override suspend fun load(request: LoadRequest): MarkdownDocument {
-        val uri = (request as LoadRequest.Local).uri
+        val uri = (request as LoadRequest.Local).path.toUri()
         val content = context.contentResolver.openInputStream(uri)
             ?.bufferedReader()
             ?.use { it.readText() }
