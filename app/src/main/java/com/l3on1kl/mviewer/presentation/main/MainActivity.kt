@@ -1,6 +1,8 @@
 package com.l3on1kl.mviewer.presentation.main
 
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -9,6 +11,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.l3on1kl.mviewer.R
 import com.l3on1kl.mviewer.databinding.ActivityMainBinding
+import com.l3on1kl.mviewer.presentation.viewer.DocumentViewerActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -49,16 +52,28 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
                         }
 
                         is MainViewModel.UiState.Error -> {
-                            // показать ошибку
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Ошибка загрузки: ${state.throwable.localizedMessage}",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
 
                         is MainViewModel.UiState.Success -> {
-                            // Переход на экран просмотра документа
+                            val intent = Intent(
+                                this@MainActivity,
+                                DocumentViewerActivity::class.java
+                            ).apply {
+                                putExtra(DocumentViewerActivity.EXTRA_DOCUMENT, state.doc)
+                                flags =
+                                    Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            }
+                            startActivity(intent)
+                            viewModel.resetToIdle()
                         }
                     }
                 }
             }
         }
-
     }
 }
