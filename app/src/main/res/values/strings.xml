@@ -8,4 +8,9 @@
     <string name="page_x_of_y">%1$d / %2$d</string>
     <string name="open_with">Open with…</string>
     <string name="imagefile">imageFile</string>
+    <string name="tab_preview">Preview</string>
+    <string name="tab_edit">Edit</string>
+    <string name="save">Save</string>
+    <string name="enter_markdown">Enter markdown</string>
+    <string name="tab_navigation">Tab navigation</string>
 </resources>

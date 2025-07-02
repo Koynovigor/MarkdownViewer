@@ -1,6 +1,7 @@
 package com.l3on1kl.mviewer.data.datasource
 
 import android.content.Context
+import androidx.core.net.toUri
 import com.l3on1kl.mviewer.domain.model.MarkdownDocument
 import com.l3on1kl.mviewer.domain.repository.LoadRequest
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -24,12 +25,21 @@ class LocalFileDataSource @Inject constructor(
         val name = uri.lastPathSegment?.substringAfterLast('/')?.substringBeforeLast('.') ?: ""
 
         return MarkdownDocument(
-            id = if (name.isNotBlank()) name else UUID.randomUUID().toString(),
+            id = name.ifBlank { UUID.randomUUID().toString() },
             content = content,
             path = uri.toString()
         )
     }
 
-    override suspend fun save(document: MarkdownDocument): Result<Unit> =
-        Result.failure(UnsupportedOperationException("Save not supported for SAF URIs"))
+    override suspend fun save(document: MarkdownDocument): Result<Unit> {
+        val uri = runCatching { document.path.toUri() }.getOrElse {
+            return Result.failure(it)
+        }
+        return runCatching {
+            context.contentResolver.openOutputStream(uri, "w")
+                ?.bufferedWriter()
+                ?.use { it.write(document.content) }
+                ?: throw IllegalArgumentException("Cannot open file for writing: $uri")
+        }
+    }
 }

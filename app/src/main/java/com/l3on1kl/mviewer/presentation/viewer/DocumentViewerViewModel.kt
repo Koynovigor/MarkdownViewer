@@ -1,6 +1,5 @@
 package com.l3on1kl.mviewer.presentation.viewer
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
@@ -9,15 +8,13 @@ import androidx.core.graphics.createBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.l3on1kl.mviewer.domain.model.MarkdownDocument
-import com.l3on1kl.mviewer.domain.usecase.LoadViewerDocumentUseCase
+import com.l3on1kl.mviewer.domain.usecase.SaveDocumentUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
@@ -26,8 +23,7 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class DocumentViewerViewModel @Inject constructor(
-    private val loadViewer: LoadViewerDocumentUseCase,
-    @param:ApplicationContext private val context: Context
+    private val saveDoc: SaveDocumentUseCase
 ) : ViewModel() {
 
     sealed interface UiState {
@@ -43,30 +39,12 @@ class DocumentViewerViewModel @Inject constructor(
     private var pdfRenderer: PdfRenderer? = null
     private var fileDescriptor: ParcelFileDescriptor? = null
     private var currentPage = 0
+    private var document: MarkdownDocument? = null
 
     fun load(document: MarkdownDocument) {
+        this.document = document
         viewModelScope.launch {
             _uiState.value = UiState.Text(document.content)
-        }
-    }
-
-    private suspend fun loadText(uri: Uri) {
-        val result = loadViewer(uri)
-        when (result) {
-            is LoadViewerDocumentUseCase.Result.Text -> _uiState.value = UiState.Text(result.text)
-            is LoadViewerDocumentUseCase.Result.Pdf -> openPdf(result.uri)
-        }
-    }
-
-    private suspend fun openPdf(uri: Uri) {
-        try {
-            withContext(Dispatchers.IO) {
-                fileDescriptor = context.contentResolver.openFileDescriptor(uri, "r")
-                pdfRenderer = PdfRenderer(fileDescriptor!!)
-            }
-            renderPage(0)
-        } catch (t: Throwable) {
-            _uiState.value = UiState.Error(t)
         }
     }
 
@@ -101,5 +79,17 @@ class DocumentViewerViewModel @Inject constructor(
         super.onCleared()
         pdfRenderer?.close()
         fileDescriptor?.close()
+    }
+
+    suspend fun saveDocument(content: String, uri: Uri? = null): Result<Unit> {
+        val current =
+            document ?: return Result.failure(IllegalStateException("Document not loaded"))
+        val updated = current.copy(content = content, path = uri?.toString() ?: current.path)
+        val result = saveDoc(updated)
+        if (result.isSuccess) {
+            document = updated
+            _uiState.value = UiState.Text(content)
+        }
+        return result
     }
 }
