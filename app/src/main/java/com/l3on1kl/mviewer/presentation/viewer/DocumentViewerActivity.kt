@@ -15,6 +15,7 @@ import com.l3on1kl.mviewer.R
 import com.l3on1kl.mviewer.databinding.ActivityDocumentViewerBinding
 import com.l3on1kl.mviewer.domain.model.MarkdownDocument
 import com.l3on1kl.mviewer.presentation.model.DocumentArgs
+import com.l3on1kl.mviewer.presentation.model.DocumentViewerUiState
 import com.l3on1kl.mviewer.presentation.model.toDomain
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -26,7 +27,7 @@ class DocumentViewerActivity : AppCompatActivity(R.layout.activity_document_view
     private lateinit var binding: ActivityDocumentViewerBinding
     private var document: MarkdownDocument? = null
     private var pendingContent: String? = null
-    private var lastState: DocumentViewerViewModel.UiState? = null
+    private var lastState: DocumentViewerUiState? = null
 
     private val createDocumentLauncher =
         registerForActivityResult(ActivityResultContracts.CreateDocument("text/markdown")) { uri ->
@@ -84,8 +85,7 @@ class DocumentViewerActivity : AppCompatActivity(R.layout.activity_document_view
                 if (index == 0) {
                     binding.previewLayout.isVisible = true
                     binding.editorLayout.isVisible = false
-                    binding.pageControls.isVisible =
-                        lastState is DocumentViewerViewModel.UiState.Pdf
+                    binding.pageControls.isVisible = lastState is DocumentViewerUiState.Pdf
                 } else {
                     binding.previewLayout.isVisible = false
                     binding.pageControls.isVisible = false
@@ -122,7 +122,7 @@ class DocumentViewerActivity : AppCompatActivity(R.layout.activity_document_view
                 viewModel.uiState.collect { state ->
                     lastState = state
                     when (state) {
-                        is DocumentViewerViewModel.UiState.Text -> {
+                        is DocumentViewerUiState.Text -> {
                             binding.scrollView.isVisible = true
                             binding.imageView.isVisible = false
                             binding.pageControls.isVisible = false
@@ -130,7 +130,7 @@ class DocumentViewerActivity : AppCompatActivity(R.layout.activity_document_view
                             binding.editText.setText(state.text)
                         }
 
-                        is DocumentViewerViewModel.UiState.Pdf -> {
+                        is DocumentViewerUiState.Pdf -> {
                             binding.scrollView.isVisible = false
                             binding.imageView.isVisible = true
                             binding.pageControls.isVisible = true
@@ -141,14 +141,14 @@ class DocumentViewerActivity : AppCompatActivity(R.layout.activity_document_view
                             binding.nextButton.isEnabled = state.page < state.pageCount
                         }
 
-                        is DocumentViewerViewModel.UiState.Error -> {
+                        is DocumentViewerUiState.Error -> {
                             binding.scrollView.isVisible = true
                             binding.imageView.isVisible = false
                             binding.pageControls.isVisible = false
                             binding.contentText.text = state.throwable.message
                         }
 
-                        DocumentViewerViewModel.UiState.Loading -> {}
+                        DocumentViewerUiState.Loading -> {}
                     }
                 }
             }

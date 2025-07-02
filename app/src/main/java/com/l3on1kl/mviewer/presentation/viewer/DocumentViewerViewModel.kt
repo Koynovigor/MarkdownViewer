@@ -1,6 +1,5 @@
 package com.l3on1kl.mviewer.presentation.viewer
 
-import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
@@ -9,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.l3on1kl.mviewer.domain.model.MarkdownDocument
 import com.l3on1kl.mviewer.domain.usecase.SaveDocumentUseCase
+import com.l3on1kl.mviewer.presentation.model.DocumentViewerUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,15 +26,8 @@ class DocumentViewerViewModel @Inject constructor(
     private val saveDoc: SaveDocumentUseCase
 ) : ViewModel() {
 
-    sealed interface UiState {
-        object Loading : UiState
-        data class Text(val text: String) : UiState
-        data class Pdf(val bitmap: Bitmap, val page: Int, val pageCount: Int) : UiState
-        data class Error(val throwable: Throwable) : UiState
-    }
-
-    private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
-    val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow<DocumentViewerUiState>(DocumentViewerUiState.Loading)
+    val uiState: StateFlow<DocumentViewerUiState> = _uiState.asStateFlow()
 
     private var pdfRenderer: PdfRenderer? = null
     private var fileDescriptor: ParcelFileDescriptor? = null
@@ -44,7 +37,7 @@ class DocumentViewerViewModel @Inject constructor(
     fun load(document: MarkdownDocument) {
         this.document = document
         viewModelScope.launch {
-            _uiState.value = UiState.Text(document.content)
+            _uiState.value = DocumentViewerUiState.Text(document.content)
         }
     }
 
@@ -71,7 +64,7 @@ class DocumentViewerViewModel @Inject constructor(
             page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
             page.close()
             currentPage = index
-            _uiState.value = UiState.Pdf(bitmap, index + 1, renderer.pageCount)
+            _uiState.value = DocumentViewerUiState.Pdf(bitmap, index + 1, renderer.pageCount)
         }
     }
 
@@ -88,7 +81,7 @@ class DocumentViewerViewModel @Inject constructor(
         val result = saveDoc(updated)
         if (result.isSuccess) {
             document = updated
-            _uiState.value = UiState.Text(content)
+            _uiState.value = DocumentViewerUiState.Text(content)
         }
         return result
     }

@@ -6,11 +6,10 @@ import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.l3on1kl.mviewer.domain.model.MarkdownDocument
-import com.l3on1kl.mviewer.domain.model.MarkdownElement
 import com.l3on1kl.mviewer.domain.repository.LoadRequest
 import com.l3on1kl.mviewer.domain.usecase.LoadDocumentUseCase
 import com.l3on1kl.mviewer.domain.usecase.ParseMarkdownUseCase
-import com.l3on1kl.mviewer.presentation.model.DocumentArgs
+import com.l3on1kl.mviewer.presentation.model.MainUiState
 import com.l3on1kl.mviewer.presentation.model.toArgs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,24 +30,12 @@ class MainViewModel @Inject constructor(
     private val parseMd: ParseMarkdownUseCase
 ) : ViewModel() {
 
-    sealed interface UiState {
-        object Idle : UiState
-        object Loading : UiState
-        data class Success(
-            val doc: DocumentArgs,
-            val elements: List<MarkdownElement>,
-            val uri: Uri?
-        ) : UiState
-
-        data class Error(val throwable: Throwable) : UiState
-    }
-
-    private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
-    val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow<MainUiState>(MainUiState.Idle)
+    val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
     /** Вызывает загрузку локального файла (SAF) */
     fun onLocalFileSelected(uri: Uri) = viewModelScope.launch {
-        _uiState.value = UiState.Loading
+        _uiState.value = MainUiState.Loading
         val result = loadDoc(LoadRequest.Local(uri.toString()))
         handleResult(result, uri)
     }
@@ -56,7 +43,7 @@ class MainViewModel @Inject constructor(
     /** Вызывает загрузку по URL */
     fun onUrlEntered(url: String) = viewModelScope.launch {
         try {
-            _uiState.value = UiState.Loading
+            _uiState.value = MainUiState.Loading
 
             if (!url.startsWith("http://") && !url.startsWith("https://")) {
                 throw MalformedURLException("URL must start with http:// or https://")
@@ -67,7 +54,7 @@ class MainViewModel @Inject constructor(
 
         } catch (e: Exception) {
             Log.e("MainViewModel", "Invalid URL: $url", e)
-            _uiState.value = UiState.Error(e)
+            _uiState.value = MainUiState.Error(e)
         }
     }
 
@@ -75,16 +62,16 @@ class MainViewModel @Inject constructor(
         _uiState.value = result.fold(
             onSuccess = { doc ->
                 val elements = parseMd(doc.content)
-                UiState.Success(doc.toArgs(), elements, uri)
+                MainUiState.Success(doc.toArgs(), elements, uri)
             },
             onFailure = {
                 Log.e("MainViewModel", "Error loading document", it)
-                UiState.Error(it)
+                MainUiState.Error(it)
             }
         )
     }
 
     fun resetToIdle() {
-        _uiState.value = UiState.Idle
+        _uiState.value = MainUiState.Idle
     }
 }

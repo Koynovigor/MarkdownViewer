@@ -11,6 +11,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.l3on1kl.mviewer.R
 import com.l3on1kl.mviewer.databinding.ActivityMainBinding
+import com.l3on1kl.mviewer.presentation.model.MainUiState
 import com.l3on1kl.mviewer.presentation.viewer.DocumentViewerActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -43,15 +44,15 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { state ->
                     when (state) {
-                        MainViewModel.UiState.Idle -> {
+                        MainUiState.Idle -> {
                             // показать пустой экран или скрыть лоадер
                         }
 
-                        MainViewModel.UiState.Loading -> {
+                        MainUiState.Loading -> {
                             // показать лоадер
                         }
 
-                        is MainViewModel.UiState.Error -> {
+                        is MainUiState.Error -> {
                             Toast.makeText(
                                 this@MainActivity,
                                 "Ошибка загрузки: ${state.throwable.localizedMessage}",
@@ -59,7 +60,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
                             ).show()
                         }
 
-                        is MainViewModel.UiState.Success -> {
+                        is MainUiState.Success -> {
                             val intent = Intent(
                                 this@MainActivity,
                                 DocumentViewerActivity::class.java
