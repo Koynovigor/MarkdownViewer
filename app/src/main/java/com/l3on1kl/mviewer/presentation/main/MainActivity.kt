@@ -52,10 +52,11 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
                             // показать лоадер
                         }
 
+
                         is MainUiState.Error -> {
                             Toast.makeText(
                                 this@MainActivity,
-                                "Ошибка загрузки: ${state.throwable.localizedMessage}",
+                                state.error.getMessage(this@MainActivity),
                                 Toast.LENGTH_LONG
                             ).show()
                         }

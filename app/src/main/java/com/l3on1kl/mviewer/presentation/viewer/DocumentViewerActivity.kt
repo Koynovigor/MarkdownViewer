@@ -11,6 +11,7 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.material.tabs.TabLayout
 import com.l3on1kl.mviewer.R
 import com.l3on1kl.mviewer.databinding.ActivityDocumentViewerBinding
 import com.l3on1kl.mviewer.domain.model.MarkdownDocument
@@ -77,21 +78,23 @@ class DocumentViewerActivity : AppCompatActivity(R.layout.activity_document_view
 
         binding.tabLayout.addTab(binding.tabLayout.newTab().setText(R.string.tab_preview))
         binding.tabLayout.addTab(binding.tabLayout.newTab().setText(R.string.tab_edit))
-        binding.tabLayout.addOnTabSelectedListener(object :
-            com.google.android.material.tabs.TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: com.google.android.material.tabs.TabLayout.Tab) {
-                val index = tab.position
-                if (index == 0) {
-                    binding.previewLayout.isVisible = true
-                    binding.editorLayout.isVisible = false
-                } else {
-                    binding.previewLayout.isVisible = false
-                    binding.editorLayout.isVisible = true
+        binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                when (tab?.position) {
+                    0 -> {
+                        binding.previewLayout.isVisible = true
+                        binding.editorLayout.isVisible = false
+                    }
+
+                    1 -> {
+                        binding.previewLayout.isVisible = false
+                        binding.editorLayout.isVisible = true
+                    }
                 }
             }
 
-            override fun onTabUnselected(tab: com.google.android.material.tabs.TabLayout.Tab?) {}
-            override fun onTabReselected(tab: com.google.android.material.tabs.TabLayout.Tab?) {}
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
         })
 
         binding.saveButton.setOnClickListener {
@@ -115,18 +118,23 @@ class DocumentViewerActivity : AppCompatActivity(R.layout.activity_document_view
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { state ->
                     when (state) {
-                        is DocumentViewerUiState.Text -> {
-                            binding.scrollView.isVisible = true
-                            binding.contentText.text = state.text
-                            binding.editText.setText(state.text)
+                        is DocumentViewerUiState.Success -> {
+                            val text = state.elements.joinToString("\n") { it.text }
+                            binding.contentText.text = text
+                            binding.editText.setText(text)
                         }
 
                         is DocumentViewerUiState.Error -> {
-                            binding.scrollView.isVisible = true
-                            binding.contentText.text = state.throwable.message
+                            binding.previewLayout.isVisible = true
+                            binding.editorLayout.isVisible = false
+                            binding.contentText.text =
+                                state.error.getMessage(this@DocumentViewerActivity)
                         }
 
-                        DocumentViewerUiState.Loading -> {}
+                        DocumentViewerUiState.Loading -> {
+                            binding.scrollView.isVisible = false
+                            binding.contentText.isVisible = false
+                        }
                     }
                 }
             }

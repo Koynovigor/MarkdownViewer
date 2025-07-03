@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.l3on1kl.mviewer.domain.model.MarkdownDocument
+import com.l3on1kl.mviewer.domain.usecase.ParseMarkdownUseCase
 import com.l3on1kl.mviewer.domain.usecase.SaveDocumentUseCase
 import com.l3on1kl.mviewer.presentation.model.DocumentViewerUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,7 +16,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class DocumentViewerViewModel @Inject constructor(
-    private val saveDoc: SaveDocumentUseCase
+    private val saveDoc: SaveDocumentUseCase,
+    private val parseMd: ParseMarkdownUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<DocumentViewerUiState>(DocumentViewerUiState.Loading)
@@ -26,7 +28,8 @@ class DocumentViewerViewModel @Inject constructor(
     fun load(document: MarkdownDocument) {
         this.document = document
         viewModelScope.launch {
-            _uiState.value = DocumentViewerUiState.Text(document.content)
+            val elements = parseMd(document.content)
+            _uiState.value = DocumentViewerUiState.Success(elements)
         }
     }
 
@@ -34,11 +37,15 @@ class DocumentViewerViewModel @Inject constructor(
         val current =
             document ?: return Result.failure(IllegalStateException("Document not loaded"))
         val updated = current.copy(content = content, path = uri?.toString() ?: current.path)
-        val result = saveDoc(updated)
-        if (result.isSuccess) {
+
+        return saveDoc(updated).onSuccess {
             document = updated
-            _uiState.value = DocumentViewerUiState.Text(content)
+            val elements = parseMd(content)
+            _uiState.value = DocumentViewerUiState.Success(elements)
+        }.onFailure {
+            _uiState.value = DocumentViewerUiState.Error(
+                com.l3on1kl.mviewer.presentation.model.UiError.Unexpected(it)
+            )
         }
-        return result
     }
 }

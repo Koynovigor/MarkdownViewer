@@ -1,7 +1,8 @@
 package com.l3on1kl.mviewer.data.repository
 
 import com.l3on1kl.mviewer.data.datasource.DocumentDataSource
-import com.l3on1kl.mviewer.data.datasource.LocalFileDataSource
+import com.l3on1kl.mviewer.data.mapper.toData
+import com.l3on1kl.mviewer.data.mapper.toDomain
 import com.l3on1kl.mviewer.domain.model.MarkdownDocument
 import com.l3on1kl.mviewer.domain.repository.DocumentRepository
 import com.l3on1kl.mviewer.domain.repository.LoadRequest
@@ -14,13 +15,16 @@ class DocumentRepositoryImpl @Inject constructor(
     override suspend fun load(request: LoadRequest): MarkdownDocument {
         val source = dataSources.firstOrNull { it.canHandle(request) }
             ?: throw IllegalArgumentException("No data source for $request")
-        return source.load(request)
+        return source.load(request).toDomain()
     }
 
     override suspend fun save(document: MarkdownDocument): Result<Unit> {
-        val localSource = dataSources
-            .firstOrNull { it is LocalFileDataSource }
-            ?: return Result.failure(IllegalStateException("Local source absent"))
-        return localSource.save(document)
+        val source = dataSources.firstOrNull { it.canHandle(LoadRequest.Local(document.path)) }
+            ?: return Result.failure(IllegalStateException("No suitable data source to save: ${document.path}"))
+
+        return runCatching {
+            val success = source.save(document.toData())
+            if (!success) throw IllegalStateException("Save operation failed")
+        }
     }
 }

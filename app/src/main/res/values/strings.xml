@@ -10,4 +10,8 @@
     <string name="save">Save</string>
     <string name="enter_markdown">Enter markdown</string>
     <string name="tab_navigation">Tab navigation</string>
+    <string name="file_not_found">File not found</string>
+    <string name="permission_denied">Permission denied</string>
+    <string name="unexpected_error">Unexpected error</string>
+    <string name="invalid_url">Invalid URL</string>
 </resources>
