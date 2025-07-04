@@ -8,13 +8,6 @@ import javax.inject.Inject
 class LoadDocumentUseCase @Inject constructor(
     private val repository: DocumentRepository
 ) {
-
-    suspend operator fun invoke(request: LoadRequest): Result<MarkdownDocument> {
-        return try {
-            val doc = repository.load(request)
-            Result.success(doc)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
+    suspend operator fun invoke(request: LoadRequest): Result<MarkdownDocument> =
+        repository.load(request)
 }

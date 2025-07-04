@@ -7,11 +7,13 @@ import javax.inject.Inject
 class SaveDocumentUseCase @Inject constructor(
     private val repository: DocumentRepository
 ) {
-    suspend operator fun invoke(document: MarkdownDocument): Result<Unit> {
-        if (document.id.isBlank() || document.path.isBlank()) {
-            return Result.failure(IllegalArgumentException("Document id or path is blank"))
-        }
 
+    suspend operator fun invoke(document: MarkdownDocument): Result<Unit> {
+        if (document.path.isBlank()) {
+            return Result.failure(InvalidDocumentException("Document path is blank"))
+        }
         return repository.save(document)
     }
+
+    class InvalidDocumentException(message: String) : IllegalArgumentException(message)
 }

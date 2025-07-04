@@ -7,7 +7,6 @@ import androidx.lifecycle.viewModelScope
 import com.l3on1kl.mviewer.domain.model.MarkdownDocument
 import com.l3on1kl.mviewer.domain.repository.LoadRequest
 import com.l3on1kl.mviewer.domain.usecase.LoadDocumentUseCase
-import com.l3on1kl.mviewer.domain.usecase.ParseMarkdownUseCase
 import com.l3on1kl.mviewer.presentation.model.MainUiState
 import com.l3on1kl.mviewer.presentation.model.UiError
 import com.l3on1kl.mviewer.presentation.model.toArgs
@@ -19,56 +18,45 @@ import kotlinx.coroutines.launch
 import java.net.URL
 import javax.inject.Inject
 
-/**
- * View model used by the document loading screen. It simply delegates to
- * domain use cases to verify that data flows through the layers.
- */
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val loadDoc: LoadDocumentUseCase,
-    private val parseMd: ParseMarkdownUseCase
+    private val loadDoc: LoadDocumentUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<MainUiState>(MainUiState.Idle)
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
-    /** Вызывает загрузку локального файла (SAF) */
     fun onLocalFileSelected(uri: Uri) = viewModelScope.launch {
         _uiState.value = MainUiState.Loading
         val result = loadDoc(LoadRequest.Local(uri.toString()))
         handleResult(result, uri)
     }
 
-    /** Вызывает загрузку по URL */
+
     fun onUrlEntered(url: String) = viewModelScope.launch {
         _uiState.value = MainUiState.Loading
 
         runCatching {
             require(url.startsWith("http://") || url.startsWith("https://")) {
-                throw IllegalArgumentException("URL must start with http:// or https://")
+                "URL must start with http:// or https://"
             }
-
             loadDoc(LoadRequest.Remote(URL(url)))
         }.onSuccess { result ->
             handleResult(result, url.toUri())
-        }.onFailure { e ->
+        }.onFailure {
             _uiState.value = MainUiState.Error(UiError.InvalidUrl)
         }
     }
 
-    private fun handleResult(result: Result<MarkdownDocument>, uri: Uri? = null) {
-        _uiState.value = result.fold(
-            onSuccess = { doc ->
-                val elements = parseMd(doc.content)
-                MainUiState.Success(doc.toArgs(), elements, uri)
-            },
-            onFailure = {
-                MainUiState.Error(UiError.Unexpected(it))
-            }
-        )
-    }
-
     fun resetToIdle() {
         _uiState.value = MainUiState.Idle
+    }
+
+
+    private fun handleResult(result: Result<MarkdownDocument>, uri: Uri?) {
+        _uiState.value = result.fold(
+            onSuccess = { doc -> MainUiState.Success(doc.toArgs(), uri) },
+            onFailure = { e -> MainUiState.Error(UiError.Unexpected(e)) }
+        )
     }
 }

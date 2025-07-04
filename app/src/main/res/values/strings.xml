@@ -4,7 +4,7 @@
     <string name="choose_file">Choose File</string>
     <string name="load_url">Load URL</string>
     <string name="open_with">Open with…</string>
-    <string name="imagefile">imageFile</string>
+    <string name="image_file">imageFile</string>
     <string name="tab_preview">Preview</string>
     <string name="tab_edit">Edit</string>
     <string name="save">Save</string>
@@ -14,4 +14,6 @@
     <string name="permission_denied">Permission denied</string>
     <string name="unexpected_error">Unexpected error</string>
     <string name="invalid_url">Invalid URL</string>
+    <string name="save_failed">Save Failed</string>
+    <string name="hint_markdown_editor">Editor</string>
 </resources>

@@ -9,40 +9,36 @@ import kotlinx.coroutines.withContext
 import java.util.UUID
 import javax.inject.Inject
 
+@Local
 class LocalMarkdownFileDataSource @Inject constructor(
     private val contentResolver: ContentResolver
-) : DocumentDataSource {
+) : WritableDocumentDataSource {
 
-    override fun canHandle(request: LoadRequest): Boolean =
-        request is LoadRequest.Local
+    override suspend fun load(request: LoadRequest): Result<DataMarkdownDocument> = runCatching {
+        val local = request as? LoadRequest.Local
+            ?: error("LocalMarkdownFileDataSource can handle only Local requests")
 
-    override suspend fun load(request: LoadRequest): DataMarkdownDocument {
-        require(request is LoadRequest.Local) { "Unsupported request type: ${request::class}" }
+        val uri = local.path.toUri()
 
-        val uri = request.path.toUri()
         val content = withContext(Dispatchers.IO) {
-            contentResolver.openInputStream(uri)
-                ?.bufferedReader()
-                ?.use { it.readText() }
-        } ?: throw IllegalArgumentException("Cannot read file: $uri")
+            contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+        } ?: throw DataSourceException.ReadFailed("Cannot read file: $uri")
 
         val name = uri.lastPathSegment?.substringAfterLast('/')?.substringBeforeLast('.') ?: ""
-
-        return DataMarkdownDocument(
+        DataMarkdownDocument(
             id = name.ifBlank { UUID.randomUUID().toString() },
             content = content,
             path = uri.toString()
         )
     }
 
-    override suspend fun save(document: DataMarkdownDocument): Boolean {
-        val uri = runCatching { document.path.toUri() }.getOrElse { throw it }
-
-        return withContext(Dispatchers.IO) {
-            contentResolver.openOutputStream(uri, "w")
+    override suspend fun save(document: DataMarkdownDocument): Result<Unit> = runCatching {
+        val uri = document.path.toUri()
+        withContext(Dispatchers.IO) {
+            contentResolver.openOutputStream(uri, "rwt")
                 ?.bufferedWriter()
                 ?.use { it.write(document.content) }
-                ?: throw IllegalArgumentException("Cannot open file for writing: $uri")
-        }.let { true }
+                ?: throw DataSourceException.WriteFailed("Cannot open file for writing: $uri")
+        }
     }
 }
