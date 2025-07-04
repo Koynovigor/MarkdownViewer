@@ -5,7 +5,6 @@ import com.l3on1kl.mviewer.domain.model.MarkdownElementType
 import java.util.UUID
 
 class MarkdownParserImpl : MarkdownParser {
-    private var rootIndent = 0
 
     override fun parse(content: String): List<MarkdownElement> {
         if (content.isBlank()) return emptyList()
@@ -13,6 +12,7 @@ class MarkdownParserImpl : MarkdownParser {
         val out = mutableListOf<MarkdownElement>()
         val lines = content.lines()
         val listStack = ArrayDeque<ListCtx>()
+        var rootIndent = 0
 
         var i = 0
         while (i < lines.size) {
