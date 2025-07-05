@@ -16,4 +16,5 @@
     <string name="invalid_url">Invalid URL</string>
     <string name="save_failed">Save Failed</string>
     <string name="hint_markdown_editor">Editor</string>
+    <string name="no_internet">No internet</string>
 </resources>

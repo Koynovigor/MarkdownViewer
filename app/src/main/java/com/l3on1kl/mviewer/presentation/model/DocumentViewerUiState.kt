@@ -1,7 +1,5 @@
 package com.l3on1kl.mviewer.presentation.model
 
-import com.l3on1kl.mviewer.domain.model.MarkdownRenderItem
-
 sealed interface DocumentViewerUiState {
     object Loading : DocumentViewerUiState
 

@@ -6,226 +6,400 @@ import java.util.UUID
 
 class MarkdownParserImpl : MarkdownParser {
 
-    override fun parse(content: String): List<MarkdownElement> {
+    override fun parse(
+        content: String
+    ): List<MarkdownElement> {
         if (content.isBlank()) return emptyList()
 
-        val out = mutableListOf<MarkdownElement>()
-        val lines = content.lines()
-        val listStack = ArrayDeque<ListCtx>()
-        var rootIndent = 0
+        val result = mutableListOf<MarkdownElement>()
+        val contentLines = content.lines()
+        val listStack = ArrayDeque<ListContext>()
+        var rootLevelIndent = 0
 
-        var i = 0
-        while (i < lines.size) {
-            val raw = lines[i]
-            val indent = raw.indexOfFirst { !it.isWhitespace() }.coerceAtLeast(0)
-            val line = raw.trimEnd()
-            if (listStack.isEmpty()) rootIndent = 0
+        var lineIndex = 0
+        while (lineIndex < contentLines.size) {
+            val currentLine = contentLines[lineIndex]
 
-            // ─── пустая строка ────────────────────────────────────────────────
-            if (line.isBlank()) {
+            val currentIndent = currentLine.indexOfFirst {
+                !it.isWhitespace()
+            }.coerceAtLeast(0)
+
+            val trimmedLine = currentLine.trimEnd()
+            if (listStack.isEmpty()) rootLevelIndent = 0
+
+            if (trimmedLine.isBlank()) {
                 listStack.clear()
-                out += MarkdownElement(MarkdownElementType.Paragraph, "")
-                i++; continue
+                result += MarkdownElement(
+                    MarkdownElementType.Paragraph,
+                    ""
+                )
+
+                lineIndex++
+                continue
             }
 
-            // ─── заголовок H1–H6 ─────────────────────────────────────────────
-            if (line.trimStart().startsWith('#')) {
-                val trimmed = line.trimStart()
-                val level = trimmed.takeWhile { it == '#' }.length.coerceIn(1, 6)
-                val text = trimmed.drop(level).trim().trimEnd('#').trim()
-                out += MarkdownElement(
+            if (trimmedLine.trimStart().startsWith('#')) {
+                val trimmedContent = trimmedLine.trimStart()
+
+                val level = trimmedContent.takeWhile {
+                    it == '#'
+                }.length.coerceIn(1, 6)
+
+                val text = trimmedContent
+                    .drop(level)
+                    .trim()
+                    .trimEnd('#')
+                    .trim()
+
+                result += MarkdownElement(
                     MarkdownElementType.Heading,
                     text,
                     mapOf("level" to level.toString())
                 )
-                i++; continue
+
+                lineIndex++
+                continue
             }
 
-            /* ─── таблица ──────────────────────────────────────────────── */
-            if (isTableRow(line)) {
-                val start = i
-                var end = i
-                while (end < lines.size && isTableRow(lines[end])) end++
+            if (isTableRow(trimmedLine)) {
+                val currentLineIndex = lineIndex
+                var tableEndIndex = lineIndex
 
-                lines.subList(start, end).forEach { row ->
-                    val cells = row.trim().trim('|').split('|').map { it.trim() }
+                while (tableEndIndex < contentLines.size &&
+                    isTableRow(contentLines[tableEndIndex])
+                ) {
+                    tableEndIndex++
+                }
 
-                    val isDivider = cells.all { cell ->
-                        cell.isNotEmpty() && cell.all { ch -> ch == '-' || ch == ':' }
+                contentLines.subList(
+                    currentLineIndex,
+                    tableEndIndex
+                ).forEach { tableRow ->
+                    val rowData = tableRow
+                        .trim()
+                        .trim('|')
+                        .split('|')
+                        .map { it.trim() }
+
+                    val isDivider = rowData.all { identifier ->
+                        identifier.isNotEmpty() && identifier.all { char ->
+                            char == '-' || char == ':'
+                        }
                     }
                     if (isDivider) return@forEach
 
-                    out += MarkdownElement(
+                    result += MarkdownElement(
                         MarkdownElementType.Table,
-                        row,
-                        mapOf("cells" to cells.joinToString(";"))
+                        tableRow,
+                        mapOf("cells" to rowData.joinToString(";"))
                     )
                 }
-                i = end; continue
+
+                lineIndex = tableEndIndex
+                continue
             }
 
-            // ─── списки ──────────────────────────────────────────────────────
-            detectListItem(raw)?.let { (ordered, body) ->
-                if (listStack.isEmpty()) rootIndent = indent
+            detectListItem(currentLine)?.let { (ordered, body) ->
+                if (listStack.isEmpty()) rootLevelIndent = currentIndent
 
-                val relIndent = ((indent - rootIndent).coerceAtLeast(0)) / INDENT_SIZE
-                val level = updateListStack(listStack, relIndent, ordered)
+                val indentLevel = ((currentIndent - rootLevelIndent)
+                    .coerceAtLeast(0)) / INDENT_SIZE
 
-                val marker = if (ordered) {
-                    listStack.joinToString(".") { it.counter.toString() } + "."
-                } else {
-                    "-".repeat(level + 1)
-                }
-
-                val liId = UUID.randomUUID().toString()
-                val common = mapOf(
-                    "ordered" to ordered.toString(),
-                    "marker" to marker,
-                    "level" to level.toString(),
-                    "li" to liId
+                val listLevel = updateListStack(
+                    listStack,
+                    indentLevel, ordered
                 )
 
-                val fragments = parseInline(body)
-                if (fragments.isEmpty()) {
-                    out += MarkdownElement(MarkdownElementType.ListItem, body, common)
+                val listPrefix = if (ordered) {
+                    listStack.joinToString(".") {
+                        it.counter.toString()
+                    } + "."
                 } else {
-                    out += fragments.first().copy(
-                        type = MarkdownElementType.ListItem,
-                        params = fragments.first().params + common
-                    )
-                    fragments.drop(1).forEach { out += it.copy(params = it.params + common) }
+                    "-".repeat(listLevel + 1)
                 }
-                i++; continue
+
+                val listItemId = UUID.randomUUID().toString()
+                val listItemMetadata = mapOf(
+                    "ordered" to ordered.toString(),
+                    "marker" to listPrefix,
+                    "level" to listLevel.toString(),
+                    "li" to listItemId
+                )
+
+                val parsedFragments = parseInline(body)
+                if (parsedFragments.isEmpty()) {
+                    result += MarkdownElement(
+                        MarkdownElementType.ListItem,
+                        body,
+                        listItemMetadata
+                    )
+                } else {
+                    result += parsedFragments.first().copy(
+                        type = MarkdownElementType.ListItem,
+                        params = parsedFragments.first().params + listItemMetadata
+                    )
+                    parsedFragments
+                        .drop(1)
+                        .forEach {
+                            result += it.copy(
+                                params = it.params + listItemMetadata
+                            )
+                        }
+                }
+
+                lineIndex++
+                continue
             }
 
-            // ─── обычный параграф + inline ───────────────────────────────────
             listStack.clear()
-            out += parseInline(line)
-            i++
+            result += parseInline(trimmedLine)
+            lineIndex++
         }
-        return out
+        return result
     }
 
-    /* ───────────────────────── helpers ───────────────────────── */
+    private fun isTableRow(
+        markdownLine: String
+    ): Boolean =
+        "|" in markdownLine &&
+                (markdownLine.trimStart().startsWith('|') || markdownLine.trimEnd()
+                    .endsWith('|')) &&
+                markdownLine.count { it == '|' } >= 2
 
-    private fun isTableRow(line: String): Boolean =
-        "|" in line && (line.trimStart().startsWith('|') || line.trimEnd().endsWith('|')) &&
-                line.count { it == '|' } >= 2
+    private fun detectListItem(
+        listItemText: String
+    ): Pair<Boolean, String>? {
+        val trimmedText = listItemText.trimStart()
 
-    private fun detectListItem(line: String): Pair<Boolean, String>? {
-        val trimmed = line.trimStart()
+        if (trimmedText.startsWith("- ") ||
+            trimmedText.startsWith("* ") ||
+            trimmedText.startsWith("+ ")
+        ) {
+            return false to trimmedText.drop(2)
+        }
 
-        if (trimmed.startsWith("- ") || trimmed.startsWith("* ") || trimmed.startsWith("+ "))
-            return false to trimmed.drop(2)
 
-        val dot = trimmed.indexOf('.')
-        if (dot > 0 && dot + 1 < trimmed.length && trimmed[dot + 1] == ' ') {
-            val digits = trimmed.take(dot)
-            if (digits.all(Char::isDigit))
-                return true to trimmed.substring(dot + 2)
+        val dotIndex = trimmedText.indexOf('.')
+        if (dotIndex > 0 &&
+            dotIndex + 1 < trimmedText.length &&
+            trimmedText[dotIndex + 1] == ' '
+        ) {
+            val leadingNumbers = trimmedText.take(dotIndex)
+
+            if (leadingNumbers.all(Char::isDigit))
+                return true to trimmedText.substring(dotIndex + 2)
         }
         return null
     }
 
-    private fun updateListStack(stack: ArrayDeque<ListCtx>, indent: Int, ordered: Boolean): Int {
-        while (stack.isNotEmpty() && indent < stack.last().indent) stack.removeLast()
-
-        if (stack.isEmpty() || indent > stack.last().indent ||
-            (indent == stack.last().indent && stack.last().ordered != ordered)
+    private fun updateListStack(
+        listStack: ArrayDeque<ListContext>,
+        indentLevel: Int,
+        orderedList: Boolean
+    ): Int {
+        while (listStack.isNotEmpty() &&
+            indentLevel < listStack.last().indent
         ) {
-            stack.addLast(ListCtx(indent, ordered))
+            listStack.removeLast()
         }
 
-        val ctx = stack.last()
+        if (listStack.isEmpty() || indentLevel > listStack.last().indent ||
+            (indentLevel == listStack.last().indent && listStack.last().ordered != orderedList)
+        ) {
+            listStack.addLast(
+                ListContext(
+                    indentLevel,
+                    orderedList
+                )
+            )
+        }
 
-        if (ordered) ctx.counter++
-        return stack.size - 1
+        val currentListContext = listStack.last()
+        if (orderedList) currentListContext.counter++
+        return listStack.size - 1
     }
 
-    private data class ListCtx(
+    private data class ListContext(
         val indent: Int,
         val ordered: Boolean,
         var counter: Int = 0
     )
 
-    /* ───────────────────────── inline parser ───────────────────────── */
-    private fun parseInline(text: String): List<MarkdownElement> {
-        if (text.isBlank()) return emptyList()
+    private fun parseInline(
+        content: String
+    ): List<MarkdownElement> {
+        if (content.isBlank()) return emptyList()
 
-        val out = mutableListOf<MarkdownElement>()
-        val plain = StringBuilder()
-        var i = 0
+        val result = mutableListOf<MarkdownElement>()
+        val textBuilder = StringBuilder()
+        var currentIndex = 0
 
         fun flushPlain() {
-            if (plain.isNotEmpty()) {
-                out += MarkdownElement(MarkdownElementType.Paragraph, plain.toString())
-                plain.clear()
+            if (textBuilder.isNotEmpty()) {
+                result += MarkdownElement(
+                    MarkdownElementType.Paragraph,
+                    textBuilder.toString()
+                )
+                textBuilder.clear()
             }
         }
 
-        while (i < text.length) {
+        while (currentIndex < content.length) {
             // image ![alt](url)
-            if (text.startsWith("![", i)) {
-                val endAlt = text.indexOf(']', i + 2)
-                val startUrl =
-                    if (endAlt != -1 && endAlt + 1 < text.length && text[endAlt + 1] == '(') endAlt + 2 else -1
-                val endUrl = if (startUrl != -1) text.indexOf(')', startUrl) else -1
-                if (endAlt != -1 && endUrl != -1) {
-                    flushPlain()
-                    val alt = text.substring(i + 2, endAlt)
-                    val url = text.substring(startUrl, endUrl)
-                    out += MarkdownElement(
-                        MarkdownElementType.Image,
-                        alt.ifBlank { url },
-                        mapOf("src" to url)
+            if (content.startsWith("![", currentIndex)) {
+                val altTextEndIndex = content.indexOf(
+                    ']',
+                    currentIndex + 2
+                )
+
+                val urlStartIndex =
+                    if (
+                        altTextEndIndex != -1 &&
+                        altTextEndIndex + 1 < content.length &&
+                        content[altTextEndIndex + 1] == '('
+                    ) {
+                        altTextEndIndex + 2
+                    } else -1
+
+                val urlEndIndex = if (urlStartIndex != -1) {
+                    content.indexOf(
+                        ')',
+                        urlStartIndex
                     )
-                    i = endUrl + 1; continue
-                }
-            }
+                } else -1
 
-            // bold **text** or __text__
-            if (text.startsWith("**", i) || text.startsWith("__", i)) {
-                val delim = text.substring(i, i + 2)
-                val end = text.indexOf(delim, i + 2)
-                if (end != -1) {
+                if (altTextEndIndex != -1 && urlEndIndex != -1) {
                     flushPlain()
-                    val inner = text.substring(i + 2, end)
-                    out += MarkdownElement(MarkdownElementType.Bold, inner)
-                    i = end + 2; continue
+
+                    val altText = content.substring(
+                        currentIndex + 2,
+                        altTextEndIndex
+                    )
+
+                    val imageUrl = content.substring(
+                        urlStartIndex,
+                        urlEndIndex
+                    )
+
+                    result += MarkdownElement(
+                        MarkdownElementType.Image,
+                        altText.ifBlank { imageUrl },
+                        mapOf("src" to imageUrl)
+                    )
+
+                    currentIndex = urlEndIndex + 1
+                    continue
                 }
             }
 
-            // strike ~~text~~
-            if (text.startsWith("~~", i)) {
-                val end = text.indexOf("~~", i + 2)
-                if (end != -1) {
+            if (
+                content.startsWith(
+                    "**",
+                    currentIndex
+                ) ||
+                content.startsWith(
+                    "__",
+                    currentIndex
+                )
+            ) {
+                val delimiter = content.substring(
+                    currentIndex,
+                    currentIndex + 2
+                )
+
+                val delimiterEndIndex = content.indexOf(
+                    delimiter,
+                    currentIndex + 2
+                )
+
+                if (delimiterEndIndex != -1) {
                     flushPlain()
-                    val inner = text.substring(i + 2, end)
-                    out += MarkdownElement(MarkdownElementType.Strikethrough, inner)
-                    i = end + 2; continue
+                    val boldText = content.substring(
+                        currentIndex + 2,
+                        delimiterEndIndex
+                    )
+
+                    result += MarkdownElement(
+                        MarkdownElementType.Bold,
+                        boldText
+                    )
+
+                    currentIndex = delimiterEndIndex + 2
+                    continue
                 }
             }
 
-            // italic *text* or _text_
-            if ((text[i] == '*' || text[i] == '_') && (i == 0 || text[i - 1] != text[i])) {
-                val delim = text[i]
-                val end = text.indexOf(delim, i + 1)
-                if (end != -1 && text.getOrNull(end + 1) != delim) {
+            if (
+                content.startsWith(
+                    "~~",
+                    currentIndex
+                )
+            ) {
+                val strikethroughEnd = content.indexOf(
+                    "~~",
+                    currentIndex + 2
+                )
+
+                if (strikethroughEnd != -1) {
                     flushPlain()
-                    val inner = text.substring(i + 1, end)
-                    out += MarkdownElement(MarkdownElementType.Italic, inner)
-                    i = end + 1; continue
+                    val strikethroughText = content.substring(
+                        currentIndex + 2,
+                        strikethroughEnd
+                    )
+
+                    result += MarkdownElement(
+                        MarkdownElementType.Strikethrough,
+                        strikethroughText
+                    )
+
+                    currentIndex = strikethroughEnd + 2
+                    continue
                 }
             }
 
-            /* обычный символ */
-            if (text[i] == '\\' && i + 1 < text.length) {
-                plain.append(text[i + 1]); i += 2; continue
+            if (
+                (content[currentIndex] == '*' || content[currentIndex] == '_') &&
+                (currentIndex == 0 || content[currentIndex - 1] != content[currentIndex])
+            ) {
+                val delimiter = content[currentIndex]
+                val indexOfNextDelimiter = content.indexOf(
+                    delimiter,
+                    currentIndex + 1
+                )
+
+                if (indexOfNextDelimiter != -1 &&
+                    content.getOrNull(indexOfNextDelimiter + 1) != delimiter
+                ) {
+                    flushPlain()
+                    val italicText = content.substring(
+                        currentIndex + 1,
+                        indexOfNextDelimiter
+                    )
+                    result += MarkdownElement(
+                        MarkdownElementType.Italic,
+                        italicText
+                    )
+
+                    currentIndex = indexOfNextDelimiter + 1
+                    continue
+                }
             }
-            plain.append(text[i]); i++
+
+            if (
+                content[currentIndex] == '\\' &&
+                currentIndex + 1 < content.length
+            ) {
+                textBuilder.append(content[currentIndex + 1])
+                currentIndex += 2
+                continue
+            }
+
+            textBuilder.append(content[currentIndex])
+            currentIndex++
         }
+
         flushPlain()
-        return out
+        return result
     }
 
     private companion object {

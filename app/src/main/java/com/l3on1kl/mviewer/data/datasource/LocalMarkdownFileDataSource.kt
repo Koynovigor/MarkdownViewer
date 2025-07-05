@@ -2,12 +2,14 @@ package com.l3on1kl.mviewer.data.datasource
 
 import android.content.ContentResolver
 import androidx.core.net.toUri
-import com.l3on1kl.mviewer.data.model.dto.DataMarkdownDocument
+import com.l3on1kl.mviewer.data.model.DataMarkdownDocument
 import com.l3on1kl.mviewer.domain.repository.LoadRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.UUID
 import javax.inject.Inject
+
+private const val OPEN_MODE_TRUNCATE = "rwt"
 
 @Local
 class LocalMarkdownFileDataSource @Inject constructor(
@@ -35,7 +37,7 @@ class LocalMarkdownFileDataSource @Inject constructor(
     override suspend fun save(document: DataMarkdownDocument): Result<Unit> = runCatching {
         val uri = document.path.toUri()
         withContext(Dispatchers.IO) {
-            contentResolver.openOutputStream(uri, "rwt")
+            contentResolver.openOutputStream(uri, OPEN_MODE_TRUNCATE)
                 ?.bufferedWriter()
                 ?.use { it.write(document.content) }
                 ?: throw DataSourceException.WriteFailed("Cannot open file for writing: $uri")

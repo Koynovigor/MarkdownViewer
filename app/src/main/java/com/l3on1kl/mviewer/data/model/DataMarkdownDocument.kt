@@ -1,4 +1,4 @@
-package com.l3on1kl.mviewer.data.model.dto
+package com.l3on1kl.mviewer.data.model
 
 data class DataMarkdownDocument(
     val id: String,

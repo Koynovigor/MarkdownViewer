@@ -6,47 +6,106 @@ import android.util.LruCache
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
+import java.net.ConnectException
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.UnknownHostException
 
 object ImageLoader {
 
+    interface Listener {
+        fun onError(ex: Throwable)
+    }
+
+    var listener: Listener? = null
+    private const val IO_TIMEOUT_MS = 5_000
     private val cache = object : LruCache<String, Bitmap>(8 * 1024 * 1024) {
-        override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
+        override fun sizeOf(
+            key: String,
+            value: Bitmap
+        ) = value.byteCount
+    }
+    private var errorReported = false
+
+    suspend fun load(
+        url: String,
+        requestedWidth: Int
+    ): Bitmap? = withContext(
+        Dispatchers.IO
+    ) {
+        cache.get(url) ?: runCatching {
+            val bytes = openBytes(url)
+            val boundsOptions = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+            }
+            BitmapFactory.decodeByteArray(
+                bytes,
+                0,
+                bytes.size,
+                boundsOptions
+            )
+
+            val sampleSize = calculateInSampleSize(
+                boundsOptions.outWidth,
+                requestedWidth
+            )
+            val decodingOptions = BitmapFactory.Options().apply {
+                inSampleSize = sampleSize
+            }
+
+            BitmapFactory.decodeByteArray(
+                bytes,
+                0,
+                bytes.size,
+                decodingOptions
+            )
+        }.onFailure { exception ->
+            if (!errorReported &&
+                (exception is UnknownHostException || exception is ConnectException)
+            ) {
+                errorReported = true
+                withContext(
+                    Dispatchers.Main
+                ) {
+                    listener?.onError(exception)
+                }
+            }
+        }.getOrNull()?.also {
+            cache.put(
+                url,
+                it
+            )
+        }
     }
 
-    /**
-     * @param url абсолютный http/https URL картинки
-     * @param reqWidth желаемая ширина (для расчёта inSampleSize)
-     */
-    suspend fun load(url: String, reqWidth: Int): Bitmap? =
-        withContext(Dispatchers.IO) {
-            cache.get(url) ?: runCatching {
-                val optsBounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                openStream(url).use { BitmapFactory.decodeStream(it, null, optsBounds) }
-
-                val sample = calculateInSampleSize(optsBounds.outWidth, reqWidth)
-                val optsDecode = BitmapFactory.Options().apply { inSampleSize = sample }
-
-                openStream(url).use { BitmapFactory.decodeStream(it, null, optsDecode) }
-            }.getOrNull()?.also { cache.put(url, it) }
-        }
-
-    private fun calculateInSampleSize(srcWidth: Int, reqWidth: Int): Int {
-        var sample = 1
-        var w = srcWidth
-        while (w / 2 >= reqWidth) {
-            sample *= 2
-            w /= 2
-        }
-        return sample
+    fun clear() {
+        cache.evictAll()
+        errorReported = false
     }
 
-    private fun openStream(url: String): BufferedInputStream {
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 10_000
-            readTimeout = 10_000
+    private fun calculateInSampleSize(
+        imageWidth: Int,
+        targetWidth: Int
+    ): Int {
+        var scaleFactor = 1
+        var scaledWidth = imageWidth
+
+        while (scaledWidth / 2 >= targetWidth) {
+            scaleFactor *= 2
+            scaledWidth /= 2
         }
-        return BufferedInputStream(conn.inputStream)
+
+        return scaleFactor
     }
+
+    private fun openBytes(
+        url: String
+    ): ByteArray =
+        (URL(url).openConnection() as HttpURLConnection).run {
+            connectTimeout = IO_TIMEOUT_MS
+            readTimeout = IO_TIMEOUT_MS
+            BufferedInputStream(inputStream).use {
+                it.readBytes()
+            }
+        }
 }

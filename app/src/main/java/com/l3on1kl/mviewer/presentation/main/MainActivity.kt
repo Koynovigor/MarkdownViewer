@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -28,13 +29,11 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         val binding = ActivityMainBinding.bind(findViewById(R.id.main))
 
         binding.openFileButton.setOnClickListener {
             openDocumentLauncher.launch(arrayOf("text/*"))
         }
-
         binding.loadUrlButton.setOnClickListener {
             val url = binding.urlInput.text.toString()
             if (url.isNotBlank()) viewModel.onUrlEntered(url)
@@ -42,36 +41,54 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { state ->
-                    when (state) {
-                        MainUiState.Idle -> {
-                            // показать пустой экран или скрыть лоадер
-                        }
-
-                        MainUiState.Loading -> {
-                            // показать лоадер
-                        }
-
-
-                        is MainUiState.Error -> {
-                            Toast.makeText(
-                                this@MainActivity,
-                                state.error.getMessage(this@MainActivity),
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
-
-                        is MainUiState.Success -> {
-                            val intent = Intent(
-                                this@MainActivity,
-                                DocumentViewerActivity::class.java
-                            ).apply {
-                                putExtra(DocumentViewerActivity.EXTRA_DOCUMENT, state.doc)
-                                flags =
-                                    Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                launch {
+                    viewModel.uiState.collect { state ->
+                        when (state) {
+                            MainUiState.Loading -> {
+                                binding.progressBar.isVisible = true
+                                binding.contentGroup.isVisible = false
                             }
-                            startActivity(intent)
-                            viewModel.resetToIdle()
+
+                            is MainUiState.Error -> {
+                                binding.progressBar.isVisible = false
+                                binding.contentGroup.isVisible = true
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    state.error.getMessage(this@MainActivity),
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+
+                            MainUiState.None -> {
+                                binding.progressBar.isVisible = false
+                                binding.contentGroup.isVisible = true
+                            }
+                        }
+                    }
+                }
+
+                launch {
+                    viewModel.events.collect { navigationEvent ->
+                        when (navigationEvent) {
+                            is MainNavEvent.OpenDocument -> {
+                                startActivity(
+                                    Intent(
+                                        this@MainActivity,
+                                        DocumentViewerActivity::class.java
+                                    ).apply {
+                                        putExtra(
+                                            DocumentViewerActivity.EXTRA_DOCUMENT,
+                                            navigationEvent.doc
+                                        )
+                                        putExtra(
+                                            DocumentViewerActivity.EXTRA_URI,
+                                            navigationEvent.uri?.toString()
+                                        )
+                                        flags =
+                                            Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                                    }
+                                )
+                            }
                         }
                     }
                 }

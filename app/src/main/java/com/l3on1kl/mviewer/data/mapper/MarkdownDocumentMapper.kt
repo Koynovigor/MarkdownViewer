@@ -1,7 +1,7 @@
 package com.l3on1kl.mviewer.data.mapper
 
 import androidx.core.net.toUri
-import com.l3on1kl.mviewer.data.model.dto.DataMarkdownDocument
+import com.l3on1kl.mviewer.data.model.DataMarkdownDocument
 import com.l3on1kl.mviewer.domain.model.MarkdownDocument
 
 object MarkdownDocumentMapper {

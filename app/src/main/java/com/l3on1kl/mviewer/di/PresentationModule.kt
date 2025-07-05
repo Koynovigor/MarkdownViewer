@@ -1,6 +1,6 @@
 package com.l3on1kl.mviewer.di
 
-import com.l3on1kl.mviewer.domain.parser.MarkdownParser
+import com.l3on1kl.mviewer.domain.usecase.ParseMarkdownUseCase
 import com.l3on1kl.mviewer.presentation.viewer.MarkdownRenderer
 import dagger.Module
 import dagger.Provides
@@ -14,6 +14,6 @@ object PresentationModule {
 
     @Provides
     @Singleton
-    fun markdownRenderer(parser: MarkdownParser): MarkdownRenderer =
-        MarkdownRenderer(parser)
+    fun markdownRenderer(parseUc: ParseMarkdownUseCase): MarkdownRenderer =
+        MarkdownRenderer(parseUc)
 }

@@ -18,8 +18,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
-    <FrameLayout
-        android:id="@+id/previewLayout"
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefresh"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
@@ -29,7 +29,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:overScrollMode="ifContentScrolls" />
-    </FrameLayout>
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
     <FrameLayout
         android:id="@+id/editorLayout"
@@ -49,13 +49,13 @@
                 android:id="@+id/editText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:autofillHints="textLongMessage"
                 android:gravity="start|top"
+                android:hint="@string/hint_markdown_editor"
                 android:imeOptions="flagNoExtractUi"
+                android:importantForAutofill="yes"
                 android:inputType="textMultiLine"
                 android:minLines="10"
-                android:hint="@string/hint_markdown_editor"
-                android:importantForAutofill="yes"
-                android:autofillHints="textLongMessage"
                 android:scrollbars="vertical" />
         </androidx.core.widget.NestedScrollView>
 

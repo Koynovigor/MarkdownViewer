@@ -8,234 +8,229 @@ import android.text.style.StyleSpan
 import com.l3on1kl.mviewer.domain.model.MarkdownDocument
 import com.l3on1kl.mviewer.domain.model.MarkdownElement
 import com.l3on1kl.mviewer.domain.model.MarkdownElementType
-import com.l3on1kl.mviewer.domain.model.MarkdownRenderItem
-import com.l3on1kl.mviewer.domain.parser.MarkdownParser
+import com.l3on1kl.mviewer.domain.usecase.ParseMarkdownUseCase
+import com.l3on1kl.mviewer.presentation.model.MarkdownRenderItem
 import javax.inject.Inject
 
 class MarkdownRenderer @Inject constructor(
-    private val parser: MarkdownParser
+    private val parseMarkdown: ParseMarkdownUseCase
 ) {
-
     fun render(doc: MarkdownDocument): List<MarkdownRenderItem> =
-        toRenderItems(parser.parse(doc.content))
+        toRenderItems(
+            parseMarkdown(doc.content)
+        )
 
-
-    private fun toRenderItems(elements: List<MarkdownElement>): List<MarkdownRenderItem> {
-        val out = mutableListOf<MarkdownRenderItem>()
+    private fun toRenderItems(
+        elements: List<MarkdownElement>
+    ): List<MarkdownRenderItem> {
+        val parsedMarkdownItems = mutableListOf<MarkdownRenderItem>()
         val paragraph = SpannableStringBuilder()
 
         fun flushParagraph() {
             if (paragraph.isNotEmpty()) {
-                out += MarkdownRenderItem.Paragraph(SpannableStringBuilder(paragraph))
+                parsedMarkdownItems += MarkdownRenderItem
+                    .Paragraph(
+                        SpannableStringBuilder(paragraph)
+                    )
+
                 paragraph.clear()
             }
         }
 
-        var idx = 0
-        while (idx < elements.size) {
-            val e = elements[idx]
+        var elementIndex = 0
+        while (elementIndex < elements.size) {
+            val currentElement = elements[elementIndex]
 
-            when (e.type) {
+            when (currentElement.type) {
 
                 MarkdownElementType.Image -> {
                     flushParagraph()
-                    out += MarkdownRenderItem.Image(
-                        url = e.params["src"].orEmpty(),
-                        alt = e.text.takeIf(String::isNotBlank)
+                    parsedMarkdownItems += MarkdownRenderItem.Image(
+                        url = currentElement.params["src"].orEmpty(),
+                        alt = currentElement.text.takeIf(
+                            String::isNotBlank
+                        )
                     )
                 }
 
                 MarkdownElementType.Heading -> {
                     flushParagraph()
-                    out += MarkdownRenderItem.Header(
-                        text = e.text,
-                        level = e.params["level"]?.toIntOrNull() ?: 1
+                    parsedMarkdownItems += MarkdownRenderItem.Header(
+                        text = currentElement.text,
+                        level = currentElement.params["level"]?.toIntOrNull() ?: 1
                     )
                 }
 
-                /* ─── Таблица ─── */
                 MarkdownElementType.Table -> {
                     flushParagraph()
 
-                    val rows = mutableListOf<List<MarkdownRenderItem.Table.Cell>>()
+                    val tableRows = mutableListOf<List<MarkdownRenderItem.Table.Cell>>()
 
-                    while (idx < elements.size && elements[idx].type == MarkdownElementType.Table) {
-                        val rawCells = elements[idx].params["cells"]?.split(';')?.map { it.trim() }
+                    while (elementIndex < elements.size &&
+                        elements[elementIndex].type == MarkdownElementType.Table
+                    ) {
+                        val rawCells = elements[elementIndex].params["cells"]
+                            ?.split(';')
+                            ?.map { it.trim() }
                             ?: emptyList()
 
                         val parsedCells = rawCells.map { source ->
-                            val inline = parser.parse(source)
+                            val inline = parseMarkdown(source)
 
                             if (inline.size == 1 && inline[0].type == MarkdownElementType.Image) {
-                                val el = inline[0]
+                                val inlineImage = inline[0]
                                 MarkdownRenderItem.Table.Cell.Image(
-                                    url = el.params["src"].orEmpty(),
-                                    alt = el.text.takeIf(String::isNotBlank)
+                                    url = inlineImage.params["src"].orEmpty(),
+                                    alt = inlineImage.text.takeIf(
+                                        String::isNotBlank
+                                    )
                                 )
                             } else {
-                                MarkdownRenderItem.Table.Cell.Text(buildSpanFromInline(inline))
+                                val styledText = SpannableStringBuilder().apply {
+                                    inline.forEach {
+                                        appendStyled(
+                                            it.text,
+                                            it.type
+                                        )
+                                    }
+                                }
+                                MarkdownRenderItem.Table.Cell.Text(styledText)
                             }
                         }
-                        rows += parsedCells
-                        idx++
+                        tableRows += parsedCells
+                        elementIndex++
                     }
-                    out += MarkdownRenderItem.Table(rows)
+                    parsedMarkdownItems += MarkdownRenderItem.Table(tableRows)
                     continue
                 }
 
-                /* ─── Элементы списка ─── */
                 MarkdownElementType.ListItem -> {
                     flushParagraph()
-                    val liId = e.params["li"] ?: run { idx++; continue }
+                    val listItemId = currentElement.params["li"]
+                        ?: run {
+                            elementIndex++
+                            continue
+                        }
 
-                    val span = SpannableStringBuilder()
-                    var imageAfter: MarkdownRenderItem.Image? = null
+                    val listItemText = SpannableStringBuilder()
+                    var imageForListItem: MarkdownRenderItem.Image? = null
 
-                    while (idx < elements.size && elements[idx].params["li"] == liId) {
-                        val cur = elements[idx]
-                        val start = span.length
-                        span.append(cur.text)
-                        val end = span.length
+                    while (elementIndex < elements.size &&
+                        elements[elementIndex].params["li"] == listItemId
+                    ) {
+                        val currentElement = elements[elementIndex]
+                        val startIndex = listItemText.length
+                        listItemText.append(currentElement.text)
+                        val endIndex = listItemText.length
 
-                        when (cur.type) {
-                            MarkdownElementType.Bold -> span.setSpan(
+                        when (currentElement.type) {
+                            MarkdownElementType.Bold -> listItemText.setSpan(
                                 StyleSpan(Typeface.BOLD),
-                                start,
-                                end,
+                                startIndex,
+                                endIndex,
                                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                             )
 
-                            MarkdownElementType.Italic -> span.setSpan(
+                            MarkdownElementType.Italic -> listItemText.setSpan(
                                 StyleSpan(Typeface.ITALIC),
-                                start,
-                                end,
+                                startIndex,
+                                endIndex,
                                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                             )
 
-                            MarkdownElementType.Strikethrough -> span.setSpan(
+                            MarkdownElementType.Strikethrough -> listItemText.setSpan(
                                 StrikethroughSpan(),
-                                start,
-                                end,
+                                startIndex,
+                                endIndex,
                                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                             )
 
-                            MarkdownElementType.Image -> imageAfter = MarkdownRenderItem.Image(
-                                url = cur.params["src"].orEmpty(),
-                                alt = cur.text.takeIf(String::isNotBlank)
-                            )
+                            MarkdownElementType.Image -> imageForListItem =
+                                MarkdownRenderItem.Image(
+                                    url = currentElement.params["src"].orEmpty(),
+                                    alt = currentElement.text.takeIf(
+                                        String::isNotBlank
+                                    )
+                                )
 
                             else -> {}
                         }
-                        idx++
+                        elementIndex++
                     }
 
-                    out += MarkdownRenderItem.ListItem(
-                        text = span,
-                        ordered = e.params["ordered"] == "true",
-                        level = e.params["level"]?.toIntOrNull() ?: 0,
-                        marker = e.params["marker"].orEmpty()
+                    parsedMarkdownItems += MarkdownRenderItem.ListItem(
+                        text = listItemText,
+                        ordered = currentElement.params["ordered"] == "true",
+                        level = currentElement.params["level"]?.toIntOrNull() ?: 0,
+                        marker = currentElement.params["marker"].orEmpty()
                     )
-                    imageAfter?.let(out::add)
+                    imageForListItem?.let(parsedMarkdownItems::add)
                     continue
                 }
 
-                /* ─── Inline-текст ─── */
                 MarkdownElementType.Bold,
                 MarkdownElementType.Italic,
                 MarkdownElementType.Strikethrough,
                 MarkdownElementType.Paragraph -> {
                     when {
-                        e.text.isEmpty() -> {
+                        currentElement.text.isEmpty() -> {
                             flushParagraph()
-                            out += MarkdownRenderItem.EmptyLine
+                            parsedMarkdownItems += MarkdownRenderItem.EmptyLine
                         }
 
-                        e.text == "\n" -> {
+                        currentElement.text == "\n" -> {
                             paragraph.append('\n')
                         }
 
-                        else -> {
-                            val start = paragraph.length
-                            paragraph.append(e.text)
-                            val end = paragraph.length
-                            when (e.type) {
-                                MarkdownElementType.Bold -> paragraph.setSpan(
-                                    StyleSpan(Typeface.BOLD),
-                                    start,
-                                    end,
-                                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                                )
-
-                                MarkdownElementType.Italic -> paragraph.setSpan(
-                                    StyleSpan(Typeface.ITALIC),
-                                    start,
-                                    end,
-                                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                                )
-
-                                MarkdownElementType.Strikethrough -> paragraph.setSpan(
-                                    StrikethroughSpan(),
-                                    start,
-                                    end,
-                                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                                )
-
-                                else -> {}
-                            }
-                        }
+                        else ->
+                            paragraph.appendStyled(
+                                currentElement.text,
+                                currentElement.type
+                            )
                     }
                 }
             }
-            idx++
+            elementIndex++
         }
         flushParagraph()
-        return out
+
+        return parsedMarkdownItems
     }
 
-    private fun buildSpanFromInline(elements: List<MarkdownElement>): CharSequence {
-        val span = SpannableStringBuilder()
-        var idx = 0
-        while (idx < elements.size) {
-            val e = elements[idx]
-            val start = span.length
-            when (e.type) {
-                MarkdownElementType.Image -> {
-                    span.append(e.text.ifBlank { "[img]" })
-                }
+    private fun SpannableStringBuilder.appendStyled(
+        textContent: String,
+        textStyle: MarkdownElementType
+    ) {
+        val startIndex = length
+        append(textContent)
+        val endIndex = length
 
-                MarkdownElementType.ListItem -> {
-                    span.append("• ").append(e.text).append('\n')
-                }
-
-                else -> span.append(e.text)
-            }
-            val end = span.length
-            when (e.type) {
-                MarkdownElementType.Bold -> span.setSpan(
+        when (textStyle) {
+            MarkdownElementType.Bold ->
+                setSpan(
                     StyleSpan(Typeface.BOLD),
-                    start,
-                    end,
-                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                    startIndex,
+                    endIndex,
+                    0
                 )
 
-                MarkdownElementType.Italic -> span.setSpan(
+            MarkdownElementType.Italic ->
+                setSpan(
                     StyleSpan(Typeface.ITALIC),
-                    start,
-                    end,
-                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                    startIndex,
+                    endIndex,
+                    0
                 )
 
-                MarkdownElementType.Strikethrough -> span.setSpan(
+            MarkdownElementType.Strikethrough ->
+                setSpan(
                     StrikethroughSpan(),
-                    start,
-                    end,
-                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                    startIndex,
+                    endIndex,
+                    0
                 )
 
-                else -> {}
-            }
-            idx++
+            else -> {}
         }
-        return span
     }
 }

@@ -1,6 +1,6 @@
 package com.l3on1kl.mviewer.data.datasource
 
-import com.l3on1kl.mviewer.data.model.dto.DataMarkdownDocument
+import com.l3on1kl.mviewer.data.model.DataMarkdownDocument
 import com.l3on1kl.mviewer.domain.repository.LoadRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

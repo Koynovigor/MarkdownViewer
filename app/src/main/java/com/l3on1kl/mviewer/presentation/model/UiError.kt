@@ -6,14 +6,9 @@ import com.l3on1kl.mviewer.R
 sealed interface UiError {
     fun getMessage(context: Context): String
 
-    object FileNotFound : UiError {
+    object NoInternet : UiError {
         override fun getMessage(context: Context): String =
-            context.getString(R.string.file_not_found)
-    }
-
-    object PermissionDenied : UiError {
-        override fun getMessage(context: Context): String =
-            context.getString(R.string.permission_denied)
+            context.getString(R.string.no_internet)
     }
 
     object InvalidUrl : UiError {
