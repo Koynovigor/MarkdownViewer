@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -13,6 +14,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.l3on1kl.mviewer.R
 import com.l3on1kl.mviewer.databinding.ActivityMainBinding
 import com.l3on1kl.mviewer.presentation.model.MainUiState
+import com.l3on1kl.mviewer.presentation.util.applySystemBarsPadding
 import com.l3on1kl.mviewer.presentation.viewer.DocumentViewerActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -30,6 +32,9 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val binding = ActivityMainBinding.bind(findViewById(R.id.main))
+
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        binding.main.applySystemBarsPadding()
 
         binding.openFileButton.setOnClickListener {
             openDocumentLauncher.launch(arrayOf("text/*"))

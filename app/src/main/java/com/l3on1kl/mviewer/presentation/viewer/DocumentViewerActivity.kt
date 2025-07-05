@@ -9,6 +9,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -22,8 +25,10 @@ import com.l3on1kl.mviewer.presentation.ImageLoader
 import com.l3on1kl.mviewer.presentation.model.DocumentArgs
 import com.l3on1kl.mviewer.presentation.model.DocumentViewerUiState
 import com.l3on1kl.mviewer.presentation.model.toDomain
+import com.l3on1kl.mviewer.presentation.util.applySystemBarsPadding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import kotlin.math.max
 
 @AndroidEntryPoint
 class DocumentViewerActivity :
@@ -72,6 +77,20 @@ class DocumentViewerActivity :
         super.onCreate(savedInstanceState)
         binding = ActivityDocumentViewerBinding
             .bind(findViewById(R.id.viewer_root))
+
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.editText) { view, insets ->
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
+            val bottom = max(ime, bars)
+            view.setPadding(view.paddingLeft, view.paddingTop, view.paddingRight, bottom)
+            binding.saveButton.translationY = -bottom.toFloat()
+            insets
+        }
+
+        binding.viewerRoot.applySystemBarsPadding()
 
         binding.rvMarkdown.adapter = adapter
         binding.rvMarkdown.layoutManager = LinearLayoutManager(this)
@@ -161,8 +180,8 @@ class DocumentViewerActivity :
             }
 
         val doc = args?.toDomain() ?: run {
-            finish(); return
-
+            finish()
+            return
         }
         document = doc
         viewModel.load(doc)
@@ -174,26 +193,25 @@ class DocumentViewerActivity :
             binding.tabLayout.newTab().setText(R.string.tab_edit)
 
         )
-        binding.tabLayout.addOnTabSelectedListener(
-            object : TabLayout.OnTabSelectedListener {
-                override fun onTabSelected(tab: TabLayout.Tab?) = when (tab?.position) {
-                    0 -> {
-                        binding.swipeRefresh.isVisible = true
-                        binding.editorLayout.isVisible = false
-                    }
-
-                    1 -> {
-                        binding.swipeRefresh.isVisible = false
-                        binding.editorLayout.isVisible = true
-                    }
-
-                    else -> Unit
+        binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) = when (tab?.position) {
+                0 -> {
+                    binding.swipeRefresh.isVisible = true
+                    binding.editorLayout.isVisible = false
                 }
 
-                override fun onTabUnselected(tab: TabLayout.Tab?) {}
-                override fun onTabReselected(tab: TabLayout.Tab?) {}
+                1 -> {
+                    binding.swipeRefresh.isVisible = false
+                    binding.editorLayout.isVisible = true
+                    ViewCompat.requestApplyInsets(binding.editText)
+                }
+
+                else -> Unit
             }
-        )
+
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
+        })
 
         binding.saveButton.setOnClickListener {
             val content = binding.editText.text.toString()

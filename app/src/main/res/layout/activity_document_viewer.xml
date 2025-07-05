@@ -38,26 +38,18 @@
         android:layout_weight="1"
         android:visibility="gone">
 
-        <androidx.core.widget.NestedScrollView
-            android:id="@+id/editorScroll"
+        <EditText
+            android:id="@+id/editText"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:fillViewport="true"
-            android:overScrollMode="ifContentScrolls">
-
-            <EditText
-                android:id="@+id/editText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:autofillHints="textLongMessage"
-                android:gravity="start|top"
-                android:hint="@string/hint_markdown_editor"
-                android:imeOptions="flagNoExtractUi"
-                android:importantForAutofill="yes"
-                android:inputType="textMultiLine"
-                android:minLines="10"
-                android:scrollbars="vertical" />
-        </androidx.core.widget.NestedScrollView>
+            android:autofillHints="textLongMessage"
+            android:gravity="start|top"
+            android:hint="@string/hint_markdown_editor"
+            android:imeOptions="flagNoExtractUi"
+            android:importantForAutofill="yes"
+            android:inputType="textMultiLine"
+            android:minLines="10"
+            android:scrollbars="vertical" />
 
         <Button
             android:id="@+id/saveButton"
