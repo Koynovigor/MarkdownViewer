@@ -1,88 +1,117 @@
 package com.l3on1kl.mviewer.presentation.viewer
 
-import android.graphics.pdf.PdfRenderer
 import android.net.Uri
-import android.os.ParcelFileDescriptor
-import androidx.core.graphics.createBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.l3on1kl.mviewer.domain.model.MarkdownDocument
+import com.l3on1kl.mviewer.domain.repository.LoadRequest
+import com.l3on1kl.mviewer.domain.usecase.LoadDocumentUseCase
 import com.l3on1kl.mviewer.domain.usecase.SaveDocumentUseCase
 import com.l3on1kl.mviewer.presentation.model.DocumentViewerUiState
+import com.l3on1kl.mviewer.presentation.model.UiError
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.net.URL
 import javax.inject.Inject
 
-/**
- * ViewModel responsible for displaying a document. It loads text files through
- * [com.l3on1kl.mviewer.domain.usecase.LoadDocumentUseCase] and renders PDF pages using [android.graphics.pdf.PdfRenderer].
- */
 @HiltViewModel
 class DocumentViewerViewModel @Inject constructor(
-    private val saveDoc: SaveDocumentUseCase
+    private val loadDoc: LoadDocumentUseCase,
+    private val saveDoc: SaveDocumentUseCase,
+    private val renderer: MarkdownRenderer
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<DocumentViewerUiState>(DocumentViewerUiState.Loading)
+    private val _uiState =
+        MutableStateFlow<DocumentViewerUiState>(
+            DocumentViewerUiState.Loading
+        )
     val uiState: StateFlow<DocumentViewerUiState> = _uiState.asStateFlow()
 
-    private var pdfRenderer: PdfRenderer? = null
-    private var fileDescriptor: ParcelFileDescriptor? = null
-    private var currentPage = 0
     private var document: MarkdownDocument? = null
 
-    fun load(document: MarkdownDocument) {
-        this.document = document
+    fun load(doc: MarkdownDocument) {
+        document = doc
         viewModelScope.launch {
-            _uiState.value = DocumentViewerUiState.Text(document.content)
+            _uiState.value = DocumentViewerUiState.Loading
+
+            val items = withContext(Dispatchers.Default) {
+                renderer.render(doc)
+            }
+            _uiState.value = DocumentViewerUiState.Success(
+                items,
+                doc.content
+            )
         }
     }
 
-    /** Shows the next page if possible. */
-    fun nextPage() {
-        val renderer = pdfRenderer ?: return
-        if (currentPage < renderer.pageCount - 1) {
-            renderPage(currentPage + 1)
-        }
-    }
+    suspend fun saveDocument(
+        content: String,
+        uri: Uri? = null
+    ): Result<Unit> {
+        val current = document ?: return Result.failure(
+            IllegalStateException("Document not loaded")
 
-    /** Shows the previous page if possible. */
-    fun prevPage() {
-        if (currentPage > 0) {
-            renderPage(currentPage - 1)
-        }
-    }
+        )
 
-    private fun renderPage(index: Int) {
-        val renderer = pdfRenderer ?: return
-        viewModelScope.launch(Dispatchers.IO) {
-            val page = renderer.openPage(index)
-            val bitmap = createBitmap(page.width, page.height)
-            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-            page.close()
-            currentPage = index
-            _uiState.value = DocumentViewerUiState.Pdf(bitmap, index + 1, renderer.pageCount)
-        }
-    }
+        val updated = current.copy(
+            content = content,
+            path = uri?.toString() ?: current.path
+        )
 
-    override fun onCleared() {
-        super.onCleared()
-        pdfRenderer?.close()
-        fileDescriptor?.close()
-    }
-
-    suspend fun saveDocument(content: String, uri: Uri? = null): Result<Unit> {
-        val current =
-            document ?: return Result.failure(IllegalStateException("Document not loaded"))
-        val updated = current.copy(content = content, path = uri?.toString() ?: current.path)
-        val result = saveDoc(updated)
-        if (result.isSuccess) {
+        return saveDoc(updated).onSuccess {
             document = updated
-            _uiState.value = DocumentViewerUiState.Text(content)
+            val items = renderer.render(updated)
+            _uiState.value = DocumentViewerUiState.Success(
+                items,
+                updated.content
+            )
+        }.onFailure {
+            _uiState.value = DocumentViewerUiState.Error(
+                UiError.Unexpected(it)
+            )
         }
-        return result
+    }
+
+    fun refresh() {
+        val doc = document ?: return
+        val req =
+            if (doc.path.startsWith("http://") ||
+                doc.path.startsWith("https://")
+            ) {
+                LoadRequest.Remote(
+                    URL(doc.path)
+                )
+            } else LoadRequest.Local(doc.path)
+
+        viewModelScope.launch {
+            _uiState.value = DocumentViewerUiState.Loading
+            loadDoc(req).fold(
+                onSuccess = { newDocument ->
+                    document = newDocument
+                    _uiState.value = DocumentViewerUiState.Success(
+                        renderer.render(newDocument),
+                        newDocument.content
+                    )
+                },
+                onFailure = {
+                    _uiState.value = DocumentViewerUiState.Error(
+                        it.toUiError()
+                    )
+                }
+            )
+        }
+    }
+
+    private fun Throwable.toUiError(): UiError = when (this) {
+        is java.net.UnknownHostException,
+        is java.net.ConnectException,
+        is java.net.SocketTimeoutException -> UiError.NoInternet
+
+        else -> UiError.Unexpected(this)
     }
 }

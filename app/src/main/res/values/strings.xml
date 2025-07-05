@@ -3,14 +3,18 @@
     <string name="enter_url">Enter URL</string>
     <string name="choose_file">Choose File</string>
     <string name="load_url">Load URL</string>
-    <string name="prev">Prev</string>
-    <string name="next">Next</string>
-    <string name="page_x_of_y">%1$d / %2$d</string>
     <string name="open_with">Open with…</string>
-    <string name="imagefile">imageFile</string>
+    <string name="image_file">imageFile</string>
     <string name="tab_preview">Preview</string>
     <string name="tab_edit">Edit</string>
     <string name="save">Save</string>
     <string name="enter_markdown">Enter markdown</string>
     <string name="tab_navigation">Tab navigation</string>
+    <string name="file_not_found">File not found</string>
+    <string name="permission_denied">Permission denied</string>
+    <string name="unexpected_error">Unexpected error</string>
+    <string name="invalid_url">Invalid URL</string>
+    <string name="save_failed">Save Failed</string>
+    <string name="hint_markdown_editor">Editor</string>
+    <string name="no_internet">No internet</string>
 </resources>

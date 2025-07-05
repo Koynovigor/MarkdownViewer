@@ -1,12 +1,14 @@
 package com.l3on1kl.mviewer.domain.usecase
 
 import com.l3on1kl.mviewer.domain.model.MarkdownElement
+import com.l3on1kl.mviewer.domain.parser.MarkdownParser
 import javax.inject.Inject
+import javax.inject.Singleton
 
-/**
- * Parses raw Markdown content into a list of elements.
- * Currently returns an empty list as a stub implementation.
- */
-class ParseMarkdownUseCase @Inject constructor() {
-    operator fun invoke(content: String): List<MarkdownElement> = emptyList()
+@Singleton
+class ParseMarkdownUseCase @Inject constructor(
+    private val parser: MarkdownParser
+) {
+    operator fun invoke(markdown: String): List<MarkdownElement> =
+        parser.parse(markdown)
 }
