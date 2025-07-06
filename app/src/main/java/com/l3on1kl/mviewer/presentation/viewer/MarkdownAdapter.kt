@@ -415,7 +415,7 @@ class MarkdownAdapter :
 
                     oldItem is MarkdownRenderItem.Paragraph &&
                             newItem is MarkdownRenderItem.Paragraph ->
-                        oldItem.text.contentEquals(newItem.text)
+                        oldItem.text.sameAs(newItem.text)
 
                     oldItem is MarkdownRenderItem.ListItem &&
                             newItem is MarkdownRenderItem.ListItem -> {
