@@ -1,7 +1,6 @@
 package com.l3on1kl.mviewer.presentation.viewer
 
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
@@ -26,6 +25,7 @@ import com.l3on1kl.mviewer.presentation.model.DocumentArgs
 import com.l3on1kl.mviewer.presentation.model.DocumentViewerUiState
 import com.l3on1kl.mviewer.presentation.model.toDomain
 import com.l3on1kl.mviewer.presentation.util.applySystemBarsPadding
+import com.l3on1kl.mviewer.presentation.util.getFileName
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import kotlin.math.max
@@ -97,33 +97,30 @@ class DocumentViewerActivity :
 
         binding.swipeRefresh.setOnRefreshListener {
             ImageLoader.clear()
-
+            viewModel.refresh()
             binding.rvMarkdown.post {
                 @SuppressLint("NotifyDataSetChanged")
                 adapter.notifyDataSetChanged()
             }
-
-            viewModel.refresh()
         }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { viewState ->
-                    binding.swipeRefresh.isRefreshing =
-                        viewState is DocumentViewerUiState.Loading
+                viewModel.uiState.collect { state ->
+                    binding.swipeRefresh.isRefreshing = state is DocumentViewerUiState.Loading
 
-                    when (viewState) {
+                    when (state) {
                         is DocumentViewerUiState.Success -> {
-                            adapter.submitList(viewState.items)
-                            binding.editText.setText(viewState.content)
+                            adapter.submitList(state.items)
+                            binding.editText.setText(state.content)
                         }
 
                         is DocumentViewerUiState.Error -> {
                             Toast.makeText(
                                 this@DocumentViewerActivity,
-                                viewState.error
-                                    .getMessage(this@DocumentViewerActivity),
-
+                                state.error.getMessage(
+                                    this@DocumentViewerActivity
+                                ),
                                 Toast.LENGTH_LONG
                             ).show()
                         }
@@ -144,28 +141,8 @@ class DocumentViewerActivity :
             }
         }
 
-        setSupportActionBar(binding.toolbar)
         binding.toolbar.setNavigationOnClickListener {
             onBackPressedDispatcher.onBackPressed()
-        }
-
-        binding.toolbar.setOnMenuItemClickListener { item ->
-            if (item.itemId == R.id.action_open_with) {
-                intent.getStringExtra(EXTRA_URI)?.let {
-                    val openIntent = Intent(
-                        Intent.ACTION_VIEW,
-                        it.toUri()
-                    )
-
-                    startActivity(
-                        Intent.createChooser(
-                            openIntent,
-                            null
-                        )
-                    )
-                }
-                true
-            } else false
         }
 
         val args: DocumentArgs? =
@@ -184,7 +161,17 @@ class DocumentViewerActivity :
             return
         }
         document = doc
-        viewModel.load(doc)
+        viewModel.tryInit(doc)
+
+        val uri = intent.getStringExtra(EXTRA_URI)?.toUri()
+
+        val fileName = if (uri != null && uri.scheme == "content") {
+            getFileName(contentResolver, uri)
+        } else {
+            doc.path.substringAfterLast('/')
+        }
+
+        binding.toolbar.title = fileName
 
         binding.tabLayout.addTab(
             binding.tabLayout.newTab().setText(R.string.tab_preview)
@@ -234,36 +221,6 @@ class DocumentViewerActivity :
                             getString(R.string.save_failed),
                             Toast.LENGTH_LONG
                         ).show()
-                    }
-                }
-            }
-        }
-
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { documentState ->
-                    when (documentState) {
-
-                        DocumentViewerUiState.Loading -> {
-                            binding.swipeRefresh.isRefreshing = true
-                        }
-
-                        is DocumentViewerUiState.Success -> {
-                            binding.swipeRefresh.isRefreshing = false
-                            adapter.submitList(documentState.items)
-                            binding.editText.setText(documentState.content)
-                        }
-
-                        is DocumentViewerUiState.Error -> {
-                            binding.swipeRefresh.isRefreshing = false
-                            Toast.makeText(
-                                this@DocumentViewerActivity,
-                                documentState.error.getMessage(
-                                    this@DocumentViewerActivity
-                                ),
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
                     }
                 }
             }

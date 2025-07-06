@@ -1,23 +1,25 @@
 <resources>
-    <string name="app_name">Markdown Viewer</string>
-    <string name="enter_url">Enter URL</string>
-    <string name="choose_file">Choose File</string>
-    <string name="load_url">Load URL</string>
-    <string name="open_with">Open with…</string>
-    <string name="image_file">imageFile</string>
+    <string name="app_name" translatable="false">Markdown Viewer</string>
+    <string name="enter_url">Paste a URL</string>
+    <string name="choose_file">Select a File</string>
+    <string name="load_url">Open from URL</string>
+    <string name="image_file">Image</string>
     <string name="tab_preview">Preview</string>
     <string name="tab_edit">Edit</string>
     <string name="save">Save</string>
-    <string name="enter_markdown">Enter markdown</string>
-    <string name="tab_navigation">Tab navigation</string>
+    <string name="enter_markdown">Enter Markdown</string>
+    <string name="tab_navigation">Document Tabs</string>
     <string name="file_not_found">File not found</string>
     <string name="permission_denied">Permission denied</string>
-    <string name="unexpected_error">Unexpected error</string>
-    <string name="invalid_url">Invalid URL</string>
-    <string name="save_failed">Save Failed</string>
-    <string name="hint_markdown_editor">Editor</string>
-    <string name="no_internet">No internet</string>
+    <string name="unexpected_error">An unexpected error occurred</string>
+    <string name="invalid_url">URL is invalid</string>
+    <string name="save_failed">Failed to save file</string>
+    <string name="hint_markdown_editor">Write your markdown here…</string>
+    <string name="no_internet">No internet connection</string>
     <string name="paste">Paste</string>
     <string name="or">OR</string>
     <string name="clipboard_empty">Clipboard is empty</string>
+    <string name="file_deleted_or_moved">File was deleted or moved</string>
+    <string name="btn_del">Delete from History</string>
+    <string name="unknown_file">Unnamed File</string>
 </resources>

@@ -8,6 +8,7 @@ import android.text.SpannableStringBuilder
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.widget.ImageView
 import android.widget.TableLayout
 import android.widget.TableRow
@@ -232,27 +233,49 @@ class MarkdownAdapter :
             startLoading(item)
         }
 
-        private fun startLoading(
-            imageItem: MarkdownRenderItem.Image
-        ) {
-            imageView.contentDescription = imageItem.alt
-            imageView.setImageResource(R.drawable.ic_placeholder)
+        private fun startLoading(imageItem: MarkdownRenderItem.Image) {
+            job?.cancel()
             progressBar.isVisible = true
 
-            job?.cancel()
-            job = CoroutineScope(
-                Dispatchers.Main
-            ).launch {
-                val loadedImage = ImageLoader.load(
-                    imageItem.url,
-                    imageView.width.takeIf {
-                        it > 0
-                    } ?: 400
-                )
+            imageView.viewTreeObserver.addOnPreDrawListener(
+                object : ViewTreeObserver.OnPreDrawListener {
+                    override fun onPreDraw(): Boolean {
+                        imageView.viewTreeObserver.removeOnPreDrawListener(this)
 
-                if (loadedImage != null) imageView.setImageBitmap(loadedImage)
-                progressBar.isVisible = false
-            }
+                        val width = imageView.width.takeIf {
+                            it > 0
+                        } ?: return true
+
+                        job = CoroutineScope(
+                            Dispatchers.Main
+                        ).launch {
+                            val cached = ImageLoader.load(
+                                imageItem.url,
+                                width
+                            )
+
+                            if (cached != null) {
+                                progressBar.isVisible = false
+                                imageView.setImageBitmap(cached)
+                            } else {
+                                progressBar.isVisible = true
+                                imageView.setImageResource(R.drawable.ic_placeholder)
+
+                                val bmp = ImageLoader.load(
+                                    imageItem.url,
+                                    width
+                                )
+
+                                bmp?.let {
+                                    imageView.setImageBitmap(it)
+                                }
+                                progressBar.isVisible = false
+                            }
+                        }
+                        return true
+                    }
+                }
+            )
         }
     }
 

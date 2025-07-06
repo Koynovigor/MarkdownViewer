@@ -13,15 +13,16 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textAllCaps="false"
-        app:menu="@menu/menu_document_viewer"
         app:navigationIcon="@drawable/ic_arrow_back" />
 
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tabLayout"
-        style="@style/MonoText"
+        style="@style/MonoText.TabLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textAllCaps="false" />
+        app:tabGravity="fill"
+        app:tabIndicatorAnimationMode="elastic"
+        app:tabMode="fixed" />
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipeRefresh"
@@ -33,7 +34,9 @@
             android:id="@+id/rvMarkdown"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:overScrollMode="ifContentScrolls" />
+            android:overScrollMode="ifContentScrolls"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="4dp" />
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
     <FrameLayout
@@ -41,6 +44,8 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="4dp"
         android:visibility="gone">
 
         <EditText
