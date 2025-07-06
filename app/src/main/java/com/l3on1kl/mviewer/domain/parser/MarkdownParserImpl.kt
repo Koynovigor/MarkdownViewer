@@ -127,24 +127,25 @@ class MarkdownParserImpl : MarkdownParser {
                 )
 
                 val parsedFragments = parseInline(body)
-                if (parsedFragments.isEmpty()) {
+
+                if (parsedFragments.isNotEmpty()) {
+                    val first = parsedFragments.first()
+                    val origType = first.type
+                    val meta = listItemMetadata + ("origStyle" to origType.name)
+
+                    result += first.copy(
+                        type = MarkdownElementType.ListItem,
+                        params = first.params + meta
+                    )
+                    parsedFragments.drop(1).forEach { frag ->
+                        result += frag.copy(params = frag.params + meta)
+                    }
+                } else {
                     result += MarkdownElement(
                         MarkdownElementType.ListItem,
                         body,
                         listItemMetadata
                     )
-                } else {
-                    result += parsedFragments.first().copy(
-                        type = MarkdownElementType.ListItem,
-                        params = parsedFragments.first().params + listItemMetadata
-                    )
-                    parsedFragments
-                        .drop(1)
-                        .forEach {
-                            result += it.copy(
-                                params = it.params + listItemMetadata
-                            )
-                        }
                 }
 
                 lineIndex++
@@ -175,29 +176,18 @@ class MarkdownParserImpl : MarkdownParser {
                     .endsWith('|')) &&
                 markdownLine.count { it == '|' } >= 2
 
-    private fun detectListItem(
-        listItemText: String
-    ): Pair<Boolean, String>? {
-        val trimmedText = listItemText.trimStart()
+    private fun detectListItem(listItemText: String): Pair<Boolean, String>? {
+        val trimmed = listItemText.trimStart()
 
-        if (trimmedText.startsWith("- ") ||
-            trimmedText.startsWith("* ") ||
-            trimmedText.startsWith("+ ")
-        ) {
-            return false to trimmedText.drop(2)
-        }
+        if (trimmed.startsWith("**") || trimmed.startsWith("__"))
+            return null
 
+        val unordered = Regex("^([*+\\-])\\s?(.*)")
+        unordered.matchEntire(trimmed)?.let { m -> return false to m.groupValues[2] }
 
-        val dotIndex = trimmedText.indexOf('.')
-        if (dotIndex > 0 &&
-            dotIndex + 1 < trimmedText.length &&
-            trimmedText[dotIndex + 1] == ' '
-        ) {
-            val leadingNumbers = trimmedText.take(dotIndex)
+        val ordered = Regex("^(\\d+)\\.\\s?(.*)")
+        ordered.matchEntire(trimmed)?.let { m -> return true to m.groupValues[2] }
 
-            if (leadingNumbers.all(Char::isDigit))
-                return true to trimmedText.substring(dotIndex + 2)
-        }
         return null
     }
 
@@ -301,39 +291,42 @@ class MarkdownParserImpl : MarkdownParser {
                 }
             }
 
-            if (
-                content.startsWith(
+            if (content.startsWith(
                     "**",
                     currentIndex
-                ) ||
-                content.startsWith(
+                ) || content.startsWith(
                     "__",
                     currentIndex
                 )
             ) {
-                val delimiter = content.substring(
+                val string = content.substring(
                     currentIndex,
                     currentIndex + 2
                 )
 
-                val delimiterEndIndex = content.indexOf(
-                    delimiter,
+                val end = content.indexOf(
+                    string,
                     currentIndex + 2
                 )
 
-                if (delimiterEndIndex != -1) {
+                if (end != -1) {
                     flushPlain()
-                    val boldText = content.substring(
+
+                    val inner = content.substring(
                         currentIndex + 2,
-                        delimiterEndIndex
+                        end
                     )
+                    val markdownElements = parseInline(inner)
 
-                    result += MarkdownElement(
-                        MarkdownElementType.Bold,
-                        boldText
-                    )
+                    markdownElements.forEach { elem ->
+                        result += if (elem.type == MarkdownElementType.Paragraph) {
+                            elem.copy(type = MarkdownElementType.Bold)
+                        } else {
+                            elem
+                        }
+                    }
 
-                    currentIndex = delimiterEndIndex + 2
+                    currentIndex = end + 2
                     continue
                 }
             }
@@ -366,30 +359,28 @@ class MarkdownParserImpl : MarkdownParser {
                 }
             }
 
-            if (
-                (content[currentIndex] == '*' || content[currentIndex] == '_') &&
-                (currentIndex == 0 || content[currentIndex - 1] != content[currentIndex])
-            ) {
+            if (content[currentIndex] == '*' || content[currentIndex] == '_') {
                 val delimiter = content[currentIndex]
-                val indexOfNextDelimiter = content.indexOf(
+                val endIndex = content.indexOf(
                     delimiter,
                     currentIndex + 1
                 )
 
-                if (indexOfNextDelimiter != -1 &&
-                    content.getOrNull(indexOfNextDelimiter + 1) != delimiter
+                if (endIndex != -1 &&
+                    content.getOrNull(endIndex + 1) != delimiter
                 ) {
                     flushPlain()
-                    val italicText = content.substring(
+
+                    val text = content.substring(
                         currentIndex + 1,
-                        indexOfNextDelimiter
+                        endIndex
                     )
                     result += MarkdownElement(
                         MarkdownElementType.Italic,
-                        italicText
+                        text
                     )
 
-                    currentIndex = indexOfNextDelimiter + 1
+                    currentIndex = endIndex + 1
                     continue
                 }
             }
