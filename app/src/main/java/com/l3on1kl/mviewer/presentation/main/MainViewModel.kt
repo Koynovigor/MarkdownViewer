@@ -8,6 +8,7 @@ import com.l3on1kl.mviewer.domain.model.HistoryEntry
 import com.l3on1kl.mviewer.domain.repository.LoadRequest
 import com.l3on1kl.mviewer.domain.usecase.AddToHistoryUseCase
 import com.l3on1kl.mviewer.domain.usecase.GetHistoryUseCase
+import com.l3on1kl.mviewer.domain.usecase.InitDefaultHistoryUseCase
 import com.l3on1kl.mviewer.domain.usecase.LoadDocumentUseCase
 import com.l3on1kl.mviewer.domain.usecase.RemoveFromHistoryUseCase
 import com.l3on1kl.mviewer.presentation.model.MainUiState
@@ -32,7 +33,8 @@ class MainViewModel @Inject constructor(
     private val loadDoc: LoadDocumentUseCase,
     private val addToHistory: AddToHistoryUseCase,
     private val removeFromHistory: RemoveFromHistoryUseCase,
-    getHistory: GetHistoryUseCase
+    getHistory: GetHistoryUseCase,
+    private val initDefaultHistoryUseCase: InitDefaultHistoryUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<MainUiState>(MainUiState.None)
@@ -47,6 +49,12 @@ class MainViewModel @Inject constructor(
             SharingStarted.Eagerly,
             emptyList()
         )
+
+    init {
+        viewModelScope.launch {
+            initDefaultHistoryUseCase()
+        }
+    }
 
     fun onLocalFileSelected(
         uri: Uri,

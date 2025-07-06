@@ -1,6 +1,7 @@
 package com.l3on1kl.mviewer.data.repository
 
 import android.content.Context
+import androidx.core.content.FileProvider
 import androidx.core.content.edit
 import com.l3on1kl.mviewer.domain.model.HistoryEntry
 import com.l3on1kl.mviewer.domain.repository.HistoryRepository
@@ -9,6 +10,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -89,5 +91,60 @@ class HistoryRepositoryImpl @Inject constructor(
                 array.toString()
             )
         }
+    }
+
+    private val launchPreferences by lazy {
+        applicationContext.getSharedPreferences(
+            "prefs",
+            Context.MODE_PRIVATE
+        )
+    }
+
+    private fun isFirstLaunch(): Boolean =
+        launchPreferences.getBoolean(
+            "is_first_launch",
+            true
+        )
+
+    private fun markFirstLaunchComplete() {
+        launchPreferences.edit {
+            putBoolean(
+                "is_first_launch",
+                false
+            )
+        }
+    }
+
+    override suspend fun initDefaultHistoryEntryIfNeeded() {
+        if (!isFirstLaunch()) return
+
+        val fileName = "example.md"
+        val file = File(
+            applicationContext.filesDir,
+            fileName
+        )
+
+        if (!file.exists()) {
+            applicationContext.assets.open(fileName).use { input ->
+                file.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+        }
+
+        val uri = FileProvider.getUriForFile(
+            applicationContext,
+            "${applicationContext.packageName}.provider",
+            file
+        )
+
+        add(
+            HistoryEntry(
+                path = uri.toString(),
+                name = "Example Document",
+                openedAt = System.currentTimeMillis()
+            )
+        )
+        markFirstLaunchComplete()
     }
 }

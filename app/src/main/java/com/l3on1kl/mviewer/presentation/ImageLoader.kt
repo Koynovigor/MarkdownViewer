@@ -114,4 +114,24 @@ object ImageLoader {
                 it.readBytes()
             }
         }
+
+    suspend fun loadOriginal(url: String): Bitmap? {
+        cache.get(url)?.let { return it }
+
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                val bytes = openBytes(url)
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            }.onFailure { exception ->
+                if (!errorReported && (exception is UnknownHostException || exception is ConnectException)) {
+                    errorReported = true
+                    withContext(Dispatchers.Main) {
+                        listener?.onError(exception)
+                    }
+                }
+            }.getOrNull()?.also {
+                cache.put(url, it)
+            }
+        }
+    }
 }

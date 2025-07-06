@@ -3,6 +3,7 @@ package com.l3on1kl.mviewer.di
 import com.l3on1kl.mviewer.domain.repository.HistoryRepository
 import com.l3on1kl.mviewer.domain.usecase.AddToHistoryUseCase
 import com.l3on1kl.mviewer.domain.usecase.GetHistoryUseCase
+import com.l3on1kl.mviewer.domain.usecase.InitDefaultHistoryUseCase
 import com.l3on1kl.mviewer.domain.usecase.ParseMarkdownUseCase
 import com.l3on1kl.mviewer.domain.usecase.RemoveFromHistoryUseCase
 import com.l3on1kl.mviewer.presentation.viewer.MarkdownRenderer
@@ -39,4 +40,10 @@ object PresentationModule {
     fun removeHistoryUc(
         repository: HistoryRepository
     ) = RemoveFromHistoryUseCase(repository)
+
+    @Provides
+    @Singleton
+    fun initDefaultHistoryUc(
+        repository: HistoryRepository
+    ) = InitDefaultHistoryUseCase(repository)
 }

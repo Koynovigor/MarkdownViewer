@@ -21,6 +21,7 @@ import com.l3on1kl.mviewer.presentation.model.MainUiState
 import com.l3on1kl.mviewer.presentation.model.toUi
 import com.l3on1kl.mviewer.presentation.util.applySystemBarsPadding
 import com.l3on1kl.mviewer.presentation.util.getFileName
+import com.l3on1kl.mviewer.presentation.util.persistReadPermissionIfPossible
 import com.l3on1kl.mviewer.presentation.viewer.DocumentViewerActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -33,35 +34,12 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
     private val openDocumentLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             uri?.let { fileUri ->
-                if (contentResolver.persistedUriPermissions.none { permissionEntry ->
-                        permissionEntry.uri == fileUri
-                    }) {
-                    val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                            Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                    try {
-                        contentResolver.takePersistableUriPermission(
-                            fileUri,
-                            flags
-                        )
-                    } catch (securityException: SecurityException) {
-                        Toast.makeText(
-                            this,
-                            securityException.localizedMessage
-                                ?: getString(R.string.permission_denied),
-                            Toast.LENGTH_SHORT
-                        ).show()
-
-                        return@let
-                    }
-                }
+                contentResolver.persistReadPermissionIfPossible(fileUri)
 
                 val name = getFileName(contentResolver, fileUri)
                     ?: getString(R.string.unknown_file)
 
-                viewModel.onLocalFileSelected(
-                    fileUri,
-                    name
-                )
+                viewModel.onLocalFileSelected(fileUri, name)
             }
         }
 
@@ -166,25 +144,12 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
                     try {
                         contentResolver.openInputStream(uri)?.use {}
 
-                        if (contentResolver.persistedUriPermissions.none {
-                                it.uri == uri
-                            }
-                        ) {
-                            contentResolver.takePersistableUriPermission(
-                                uri,
-                                Intent.FLAG_GRANT_READ_URI_PERMISSION
-                            )
-                        }
+                        contentResolver.persistReadPermissionIfPossible(uri)
 
-                        val name = getFileName(
-                            contentResolver,
-                            uri
-                        ) ?: getString(R.string.unknown_file)
+                        val name = getFileName(contentResolver, uri)
+                            ?: getString(R.string.unknown_file)
 
-                        viewModel.onLocalFileSelected(
-                            uri,
-                            name
-                        )
+                        viewModel.onLocalFileSelected(uri, name)
                     } catch (_: Exception) {
                         Toast.makeText(
                             this,

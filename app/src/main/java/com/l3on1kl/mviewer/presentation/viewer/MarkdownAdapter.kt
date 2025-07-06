@@ -242,36 +242,18 @@ class MarkdownAdapter :
                     override fun onPreDraw(): Boolean {
                         imageView.viewTreeObserver.removeOnPreDrawListener(this)
 
-                        val width = imageView.width.takeIf {
-                            it > 0
-                        } ?: return true
+                        job = CoroutineScope(Dispatchers.Main).launch {
+                            val bmp = ImageLoader.loadOriginal(imageItem.url)
 
-                        job = CoroutineScope(
-                            Dispatchers.Main
-                        ).launch {
-                            val cached = ImageLoader.load(
-                                imageItem.url,
-                                width
-                            )
-
-                            if (cached != null) {
+                            if (bmp != null) {
                                 progressBar.isVisible = false
-                                imageView.setImageBitmap(cached)
+                                imageView.setImageBitmap(bmp)
                             } else {
-                                progressBar.isVisible = true
                                 imageView.setImageResource(R.drawable.ic_placeholder)
-
-                                val bmp = ImageLoader.load(
-                                    imageItem.url,
-                                    width
-                                )
-
-                                bmp?.let {
-                                    imageView.setImageBitmap(it)
-                                }
                                 progressBar.isVisible = false
                             }
                         }
+
                         return true
                     }
                 }
