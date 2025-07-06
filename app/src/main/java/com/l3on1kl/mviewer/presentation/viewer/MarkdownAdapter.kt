@@ -20,6 +20,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.l3on1kl.mviewer.R
 import com.l3on1kl.mviewer.presentation.ImageLoader
 import com.l3on1kl.mviewer.presentation.model.MarkdownRenderItem
+import com.l3on1kl.mviewer.presentation.util.sameAs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -382,7 +383,7 @@ class MarkdownAdapter :
         const val PAYLOAD_RELOAD_IMAGE = 1
 
         private fun MarkdownRenderItem.key(): Any = when (this) {
-            is MarkdownRenderItem.Header -> "H$level:$text"
+            is MarkdownRenderItem.Header -> "H$level:${text.toString().hashCode()}"
 
             is MarkdownRenderItem.Paragraph -> "P:${text.hashCode()}"
 
@@ -407,6 +408,11 @@ class MarkdownAdapter :
                 newItem: MarkdownRenderItem
             ): Boolean =
                 when {
+                    oldItem is MarkdownRenderItem.Header &&
+                            newItem is MarkdownRenderItem.Header ->
+                        oldItem.level == newItem.level &&
+                                oldItem.text.sameAs(newItem.text)
+
                     oldItem is MarkdownRenderItem.Paragraph &&
                             newItem is MarkdownRenderItem.Paragraph ->
                         oldItem.text.contentEquals(newItem.text)
@@ -446,7 +452,7 @@ class MarkdownAdapter :
                 }
 
             private fun MarkdownRenderItem.key(): Any = when (this) {
-                is MarkdownRenderItem.Header -> "H$level:$text"
+                is MarkdownRenderItem.Header -> "H$level:${text.toString().hashCode()}"
 
                 is MarkdownRenderItem.Paragraph -> "P:${text.toString().hashCode()}"
 
