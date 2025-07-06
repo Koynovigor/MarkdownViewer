@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/viewer_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/backgroundColor"
+    android:orientation="vertical">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        style="@style/MonoText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textAllCaps="false"
+        app:navigationIcon="@drawable/ic_arrow_back" />
+
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tabLayout"
+        style="@style/MonoText.TabLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:tabGravity="fill"
+        app:tabIndicatorAnimationMode="elastic"
+        app:tabMode="fixed" />
+
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefresh"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvMarkdown"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:overScrollMode="ifContentScrolls"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="4dp" />
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+    <FrameLayout
+        android:id="@+id/editorLayout"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="4dp"
+        android:visibility="gone">
+
+        <EditText
+            android:id="@+id/editText"
+            style="@style/MonoText"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:autofillHints="textLongMessage"
+            android:gravity="start|top"
+            android:hint="@string/hint_markdown_editor"
+            android:imeOptions="flagNoExtractUi"
+            android:importantForAutofill="yes"
+            android:inputType="textMultiLine"
+            android:minLines="10"
+            android:scrollbars="vertical"
+            android:textColor="?attr/colorOnBackground"
+            android:textCursorDrawable="@null" />
+
+        <Button
+            android:id="@+id/saveButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end|bottom"
+            android:layout_margin="16dp"
+            android:backgroundTint="?attr/colorPrimary"
+            android:elevation="6dp"
+            android:text="@string/save"
+            android:textAllCaps="false" />
+    </FrameLayout>
+</LinearLayout>
