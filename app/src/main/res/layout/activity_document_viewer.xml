@@ -4,19 +4,24 @@
     android:id="@+id/viewer_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="?attr/backgroundColor"
     android:orientation="vertical">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
+        style="@style/MonoText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:textAllCaps="false"
         app:menu="@menu/menu_document_viewer"
         app:navigationIcon="@drawable/ic_arrow_back" />
 
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tabLayout"
+        style="@style/MonoText"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:textAllCaps="false" />
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipeRefresh"
@@ -40,6 +45,7 @@
 
         <EditText
             android:id="@+id/editText"
+            style="@style/MonoText"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:autofillHints="textLongMessage"
@@ -49,7 +55,9 @@
             android:importantForAutofill="yes"
             android:inputType="textMultiLine"
             android:minLines="10"
-            android:scrollbars="vertical" />
+            android:scrollbars="vertical"
+            android:textColor="?attr/colorOnBackground"
+            android:textCursorDrawable="@null" />
 
         <Button
             android:id="@+id/saveButton"
@@ -59,6 +67,7 @@
             android:layout_margin="16dp"
             android:backgroundTint="?attr/colorPrimary"
             android:elevation="6dp"
-            android:text="@string/save" />
+            android:text="@string/save"
+            android:textAllCaps="false" />
     </FrameLayout>
 </LinearLayout>

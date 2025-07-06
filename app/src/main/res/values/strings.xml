@@ -17,4 +17,7 @@
     <string name="save_failed">Save Failed</string>
     <string name="hint_markdown_editor">Editor</string>
     <string name="no_internet">No internet</string>
+    <string name="paste">Paste</string>
+    <string name="or">OR</string>
+    <string name="clipboard_empty">Clipboard is empty</string>
 </resources>

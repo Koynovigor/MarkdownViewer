@@ -1,5 +1,6 @@
 package com.l3on1kl.mviewer.presentation.main
 
+import android.content.ClipboardManager
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -42,6 +43,24 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         binding.loadUrlButton.setOnClickListener {
             val url = binding.urlInput.text.toString()
             if (url.isNotBlank()) viewModel.onUrlEntered(url)
+        }
+
+        binding.urlInputLayout.setEndIconOnClickListener {
+            val clipboard = getSystemService(
+                CLIPBOARD_SERVICE
+            ) as ClipboardManager
+
+            val clipboardText = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
+
+            if (!clipboardText.isNullOrBlank()) {
+                binding.urlInput.setText(clipboardText)
+            } else {
+                Toast.makeText(
+                    this,
+                    R.string.clipboard_empty,
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
 
         lifecycleScope.launch {
