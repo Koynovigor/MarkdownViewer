@@ -141,7 +141,7 @@ class HistoryRepositoryImpl @Inject constructor(
         add(
             HistoryEntry(
                 path = uri.toString(),
-                name = "Example Document",
+                name = "example.md",
                 openedAt = System.currentTimeMillis()
             )
         )

@@ -346,7 +346,7 @@ class MarkdownAdapter :
                 ).launch {
                     val loadedImage = ImageLoader.load(
                         imageCell.url,
-                        dp(80)
+                        dp(60)
                     )
                     loadedImage?.let { setImageBitmap(it) }
                 }
