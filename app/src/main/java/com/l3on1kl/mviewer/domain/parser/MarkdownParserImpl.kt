@@ -153,6 +153,15 @@ class MarkdownParserImpl : MarkdownParser {
 
             listStack.clear()
             result += parseInline(trimmedLine)
+            if (lineIndex + 1 < contentLines.size &&
+                contentLines[lineIndex + 1].isNotBlank()
+            ) {
+                result += MarkdownElement(
+                    MarkdownElementType.Paragraph,
+                    "\n"
+                )
+            }
+
             lineIndex++
         }
         return result

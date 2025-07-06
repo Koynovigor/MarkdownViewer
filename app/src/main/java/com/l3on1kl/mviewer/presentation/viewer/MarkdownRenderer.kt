@@ -55,8 +55,29 @@ class MarkdownRenderer @Inject constructor(
 
                 MarkdownElementType.Heading -> {
                     flushParagraph()
+
+                    val styled = SpannableStringBuilder().apply {
+                        parseMarkdown(currentElement.text).forEach { inline ->
+                            when (inline.type) {
+                                MarkdownElementType.Image -> {
+                                    parsedMarkdownItems += MarkdownRenderItem.Image(
+                                        url = inline.params["src"].orEmpty(),
+                                        alt = inline.text.takeIf(
+                                            String::isNotBlank
+                                        )
+                                    )
+                                }
+
+                                else -> appendStyled(
+                                    inline.text,
+                                    inline.type
+                                )
+                            }
+                        }
+                    }
+
                     parsedMarkdownItems += MarkdownRenderItem.Header(
-                        text = currentElement.text,
+                        text = styled,
                         level = currentElement.params["level"]?.toIntOrNull() ?: 1
                     )
                 }
@@ -144,6 +165,12 @@ class MarkdownRenderer @Inject constructor(
                                 endIndex,
                                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                             )
+
+                            MarkdownElementType.Paragraph ->
+                                listItemText.appendStyled(
+                                    currentElement.text,
+                                    MarkdownElementType.Paragraph
+                                )
 
                             MarkdownElementType.Image -> imageForListItem =
                                 MarkdownRenderItem.Image(
