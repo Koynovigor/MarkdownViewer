@@ -19,7 +19,7 @@ object ImageLoader {
 
     var listener: Listener? = null
     private const val IO_TIMEOUT_MS = 5_000
-    private val cache = object : LruCache<String, Bitmap>(8 * 1024 * 1024) {
+    private val cache = object : LruCache<String, Bitmap>(32 * 1024 * 1024) {
         override fun sizeOf(
             key: String,
             value: Bitmap
@@ -30,51 +30,57 @@ object ImageLoader {
     suspend fun load(
         url: String,
         requestedWidth: Int
-    ): Bitmap? = withContext(
-        Dispatchers.IO
-    ) {
-        cache.get(url) ?: runCatching {
-            val bytes = openBytes(url)
-            val boundsOptions = BitmapFactory.Options().apply {
-                inJustDecodeBounds = true
-            }
-            BitmapFactory.decodeByteArray(
-                bytes,
-                0,
-                bytes.size,
-                boundsOptions
-            )
+    ): Bitmap? {
+        cache.get(url)?.let { image ->
+            return image
+        }
 
-            val sampleSize = calculateInSampleSize(
-                boundsOptions.outWidth,
-                requestedWidth
-            )
-            val decodingOptions = BitmapFactory.Options().apply {
-                inSampleSize = sampleSize
-            }
-
-            BitmapFactory.decodeByteArray(
-                bytes,
-                0,
-                bytes.size,
-                decodingOptions
-            )
-        }.onFailure { exception ->
-            if (!errorReported &&
-                (exception is UnknownHostException || exception is ConnectException)
-            ) {
-                errorReported = true
-                withContext(
-                    Dispatchers.Main
-                ) {
-                    listener?.onError(exception)
+        return withContext(
+            Dispatchers.IO
+        ) {
+            cache.get(url) ?: runCatching {
+                val bytes = openBytes(url)
+                val boundsOptions = BitmapFactory.Options().apply {
+                    inJustDecodeBounds = true
                 }
+                BitmapFactory.decodeByteArray(
+                    bytes,
+                    0,
+                    bytes.size,
+                    boundsOptions
+                )
+
+                val sampleSize = calculateInSampleSize(
+                    boundsOptions.outWidth,
+                    requestedWidth
+                )
+                val decodingOptions = BitmapFactory.Options().apply {
+                    inSampleSize = sampleSize
+                }
+
+                BitmapFactory.decodeByteArray(
+                    bytes,
+                    0,
+                    bytes.size,
+                    decodingOptions
+                )
+            }.onFailure { exception ->
+                if (!errorReported &&
+                    (exception is UnknownHostException || exception is ConnectException)
+                ) {
+                    errorReported = true
+                    withContext(
+                        Dispatchers.Main
+                    ) {
+                        listener?.onError(exception)
+                    }
+                }
+            }.getOrNull()?.also {
+                cache.put(
+                    url,
+                    it
+                )
             }
-        }.getOrNull()?.also {
-            cache.put(
-                url,
-                it
-            )
         }
     }
 

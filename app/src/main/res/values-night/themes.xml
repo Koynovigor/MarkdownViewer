@@ -1,7 +1,20 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.MarkdownViewer" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+<resources>
+
+    <style name="Theme.MViewer" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="backgroundColor">@color/bw_background</item>
+        <item name="colorOnBackground">@color/bw_onBackground</item>
+
+        <item name="colorSurface">@color/bw_background</item>
+        <item name="colorOnSurface">@color/bw_onBackground</item>
+
+        <item name="colorPrimary">@color/bw_onBackground</item>
+        <item name="colorOnPrimary">@color/bw_background</item>
+
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+
+        <item name="android:fontFamily">@font/jetbrains_mono</item>
+
+        <item name="buttonStyle">@style/Widget.MViewer.Button</item>
     </style>
 </resources>

@@ -6,7 +6,7 @@
     android:viewportHeight="222"
     tools:ignore="VectorRaster">
     <path
-        android:fillColor="?attr/colorErrorContainer"
+        android:fillColor="@android:color/darker_gray"
         android:pathData="M4,0L156,0A4,4 0,0 1,160 4L160,218A4,4 0,0 1,156 222L4,222A4,4 0,0 1,0 218L0,4A4,4 0,0 1,4 0z" />
     <group>
         <clip-path android:pathData="M51.28,79.92h57.44v62.16h-57.44z" />

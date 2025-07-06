@@ -1,9 +1,25 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.MarkdownViewer" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+<resources>
+
+    <style name="Theme.MViewer" parent="Theme.Material3.Light.NoActionBar">
+        <item name="backgroundColor">@color/bw_background</item>
+        <item name="colorOnBackground">@color/bw_onBackground</item>
+
+        <item name="colorSurface">@color/bw_background</item>
+        <item name="colorOnSurface">@color/bw_onBackground</item>
+
+        <item name="colorPrimary">@color/bw_onBackground</item>
+        <item name="colorOnPrimary">@color/bw_background</item>
+
+        <item name="android:statusBarColor">@color/bw_background</item>
+        <item name="android:navigationBarColor">@color/bw_background</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+
+        <item name="android:fontFamily">@font/jetbrains_mono</item>
+
+        <item name="buttonStyle">@style/Widget.MViewer.Button</item>
     </style>
 
-    <style name="Theme.MarkdownViewer" parent="Base.Theme.MarkdownViewer" />
+    <style name="Theme.MarkdownViewer" parent="Theme.MViewer" />
 </resources>

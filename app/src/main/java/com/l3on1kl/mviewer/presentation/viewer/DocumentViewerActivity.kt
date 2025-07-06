@@ -1,7 +1,6 @@
 package com.l3on1kl.mviewer.presentation.viewer
 
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
@@ -9,6 +8,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -22,8 +24,11 @@ import com.l3on1kl.mviewer.presentation.ImageLoader
 import com.l3on1kl.mviewer.presentation.model.DocumentArgs
 import com.l3on1kl.mviewer.presentation.model.DocumentViewerUiState
 import com.l3on1kl.mviewer.presentation.model.toDomain
+import com.l3on1kl.mviewer.presentation.util.applySystemBarsPadding
+import com.l3on1kl.mviewer.presentation.util.getFileName
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import kotlin.math.max
 
 @AndroidEntryPoint
 class DocumentViewerActivity :
@@ -73,38 +78,49 @@ class DocumentViewerActivity :
         binding = ActivityDocumentViewerBinding
             .bind(findViewById(R.id.viewer_root))
 
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.editText) { view, insets ->
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
+            val bottom = max(ime, bars)
+            view.setPadding(view.paddingLeft, view.paddingTop, view.paddingRight, bottom)
+            binding.saveButton.translationY = -bottom.toFloat()
+            insets
+        }
+
+        binding.viewerRoot.applySystemBarsPadding()
+
         binding.rvMarkdown.adapter = adapter
         binding.rvMarkdown.layoutManager = LinearLayoutManager(this)
 
         binding.swipeRefresh.setOnRefreshListener {
             ImageLoader.clear()
-
+            viewModel.refresh()
             binding.rvMarkdown.post {
                 @SuppressLint("NotifyDataSetChanged")
                 adapter.notifyDataSetChanged()
             }
-
-            viewModel.refresh()
         }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { viewState ->
-                    binding.swipeRefresh.isRefreshing =
-                        viewState is DocumentViewerUiState.Loading
+                viewModel.uiState.collect { state ->
+                    binding.swipeRefresh.isRefreshing = state is DocumentViewerUiState.Loading
 
-                    when (viewState) {
+                    when (state) {
                         is DocumentViewerUiState.Success -> {
-                            adapter.submitList(viewState.items)
-                            binding.editText.setText(viewState.content)
+                            adapter.submitList(state.items)
+                            binding.editText.setText(state.content)
                         }
 
                         is DocumentViewerUiState.Error -> {
                             Toast.makeText(
                                 this@DocumentViewerActivity,
-                                viewState.error
-                                    .getMessage(this@DocumentViewerActivity),
-
+                                state.error.getMessage(
+                                    this@DocumentViewerActivity
+                                ),
                                 Toast.LENGTH_LONG
                             ).show()
                         }
@@ -125,28 +141,8 @@ class DocumentViewerActivity :
             }
         }
 
-        setSupportActionBar(binding.toolbar)
         binding.toolbar.setNavigationOnClickListener {
             onBackPressedDispatcher.onBackPressed()
-        }
-
-        binding.toolbar.setOnMenuItemClickListener { item ->
-            if (item.itemId == R.id.action_open_with) {
-                intent.getStringExtra(EXTRA_URI)?.let {
-                    val openIntent = Intent(
-                        Intent.ACTION_VIEW,
-                        it.toUri()
-                    )
-
-                    startActivity(
-                        Intent.createChooser(
-                            openIntent,
-                            null
-                        )
-                    )
-                }
-                true
-            } else false
         }
 
         val args: DocumentArgs? =
@@ -161,11 +157,21 @@ class DocumentViewerActivity :
             }
 
         val doc = args?.toDomain() ?: run {
-            finish(); return
-
+            finish()
+            return
         }
         document = doc
-        viewModel.load(doc)
+        viewModel.tryInit(doc)
+
+        val uri = intent.getStringExtra(EXTRA_URI)?.toUri()
+
+        val fileName = if (uri != null && uri.scheme == "content") {
+            getFileName(contentResolver, uri)
+        } else {
+            doc.path.substringAfterLast('/')
+        }
+
+        binding.toolbar.title = fileName
 
         binding.tabLayout.addTab(
             binding.tabLayout.newTab().setText(R.string.tab_preview)
@@ -174,26 +180,25 @@ class DocumentViewerActivity :
             binding.tabLayout.newTab().setText(R.string.tab_edit)
 
         )
-        binding.tabLayout.addOnTabSelectedListener(
-            object : TabLayout.OnTabSelectedListener {
-                override fun onTabSelected(tab: TabLayout.Tab?) = when (tab?.position) {
-                    0 -> {
-                        binding.swipeRefresh.isVisible = true
-                        binding.editorLayout.isVisible = false
-                    }
-
-                    1 -> {
-                        binding.swipeRefresh.isVisible = false
-                        binding.editorLayout.isVisible = true
-                    }
-
-                    else -> Unit
+        binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) = when (tab?.position) {
+                0 -> {
+                    binding.swipeRefresh.isVisible = true
+                    binding.editorLayout.isVisible = false
                 }
 
-                override fun onTabUnselected(tab: TabLayout.Tab?) {}
-                override fun onTabReselected(tab: TabLayout.Tab?) {}
+                1 -> {
+                    binding.swipeRefresh.isVisible = false
+                    binding.editorLayout.isVisible = true
+                    ViewCompat.requestApplyInsets(binding.editText)
+                }
+
+                else -> Unit
             }
-        )
+
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
+        })
 
         binding.saveButton.setOnClickListener {
             val content = binding.editText.text.toString()
@@ -216,36 +221,6 @@ class DocumentViewerActivity :
                             getString(R.string.save_failed),
                             Toast.LENGTH_LONG
                         ).show()
-                    }
-                }
-            }
-        }
-
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { documentState ->
-                    when (documentState) {
-
-                        DocumentViewerUiState.Loading -> {
-                            binding.swipeRefresh.isRefreshing = true
-                        }
-
-                        is DocumentViewerUiState.Success -> {
-                            binding.swipeRefresh.isRefreshing = false
-                            adapter.submitList(documentState.items)
-                            binding.editText.setText(documentState.content)
-                        }
-
-                        is DocumentViewerUiState.Error -> {
-                            binding.swipeRefresh.isRefreshing = false
-                            Toast.makeText(
-                                this@DocumentViewerActivity,
-                                documentState.error.getMessage(
-                                    this@DocumentViewerActivity
-                                ),
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
                     }
                 }
             }

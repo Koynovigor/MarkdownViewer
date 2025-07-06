@@ -9,7 +9,9 @@ import com.l3on1kl.mviewer.data.datasource.Remote
 import com.l3on1kl.mviewer.data.datasource.RemoteMarkdownDataSource
 import com.l3on1kl.mviewer.data.datasource.WritableDocumentDataSource
 import com.l3on1kl.mviewer.data.repository.DocumentRepositoryImpl
+import com.l3on1kl.mviewer.data.repository.HistoryRepositoryImpl
 import com.l3on1kl.mviewer.domain.repository.DocumentRepository
+import com.l3on1kl.mviewer.domain.repository.HistoryRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -42,4 +44,10 @@ object DataModule {
         @Local local: WritableDocumentDataSource,
         @Remote remote: ReadableDocumentDataSource
     ): DocumentRepository = DocumentRepositoryImpl(local, remote)
+
+    @Provides
+    @Singleton
+    fun historyRepository(
+        historyRepositoryImpl: HistoryRepositoryImpl
+    ): HistoryRepository = historyRepositoryImpl
 }

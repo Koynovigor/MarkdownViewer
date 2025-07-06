@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Markdown Viewer</string>
+    <string name="enter_url">Вставьте URL</string>
+    <string name="choose_file">Выбрать файл</string>
+    <string name="load_url">Открыть по ссылке</string>
+    <string name="image_file">Изображение</string>
+    <string name="tab_preview">Предпросмотр</string>
+    <string name="tab_edit">Редактировать</string>
+    <string name="save">Сохранить</string>
+    <string name="enter_markdown">Введите Markdown</string>
+    <string name="tab_navigation">Навигация по вкладкам</string>
+    <string name="file_not_found">Файл не найден</string>
+    <string name="permission_denied">Доступ запрещён</string>
+    <string name="unexpected_error">Произошла непредвиденная ошибка</string>
+    <string name="invalid_url">Неверный URL</string>
+    <string name="save_failed">Не удалось сохранить файл</string>
+    <string name="hint_markdown_editor">Напишите markdown здесь…</string>
+    <string name="no_internet">Нет подключения к интернету</string>
+    <string name="paste">Вставить</string>
+    <string name="or">ИЛИ</string>
+    <string name="clipboard_empty">Буфер обмена пуст</string>
+    <string name="file_deleted_or_moved">Файл был удалён или перемещён</string>
+    <string name="btn_del">Удалить из истории</string>
+    <string name="unknown_file">Безымянный файл</string>
+</resources>

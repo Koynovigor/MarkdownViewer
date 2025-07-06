@@ -49,6 +49,11 @@ class DocumentViewerViewModel @Inject constructor(
         }
     }
 
+    fun tryInit(doc: MarkdownDocument) {
+        if (document != null) return
+        load(doc)
+    }
+
     suspend fun saveDocument(
         content: String,
         uri: Uri? = null
