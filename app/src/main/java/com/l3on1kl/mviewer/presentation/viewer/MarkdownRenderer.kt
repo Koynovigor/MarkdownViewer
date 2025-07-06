@@ -140,48 +140,91 @@ class MarkdownRenderer @Inject constructor(
                         elements[elementIndex].params["li"] == listItemId
                     ) {
                         val currentElement = elements[elementIndex]
-                        val startIndex = listItemText.length
-                        listItemText.append(currentElement.text)
-                        val endIndex = listItemText.length
 
                         when (currentElement.type) {
-                            MarkdownElementType.Bold -> listItemText.setSpan(
-                                StyleSpan(Typeface.BOLD),
-                                startIndex,
-                                endIndex,
-                                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                            )
+                            MarkdownElementType.Bold,
+                            MarkdownElementType.Italic,
+                            MarkdownElementType.Strikethrough -> {
+                                val start = listItemText.length
+                                listItemText.append(currentElement.text)
+                                val end = listItemText.length
 
-                            MarkdownElementType.Italic -> listItemText.setSpan(
-                                StyleSpan(Typeface.ITALIC),
-                                startIndex,
-                                endIndex,
-                                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                            )
+                                when (currentElement.type) {
+                                    MarkdownElementType.Bold -> listItemText.setSpan(
+                                        StyleSpan(Typeface.BOLD),
+                                        start,
+                                        end,
+                                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                                    )
 
-                            MarkdownElementType.Strikethrough -> listItemText.setSpan(
-                                StrikethroughSpan(),
-                                startIndex,
-                                endIndex,
-                                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                            )
+                                    MarkdownElementType.Italic -> listItemText.setSpan(
+                                        StyleSpan(Typeface.ITALIC),
+                                        start,
+                                        end,
+                                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                                    )
 
-                            MarkdownElementType.Paragraph ->
+                                    MarkdownElementType.Strikethrough -> listItemText.setSpan(
+                                        StrikethroughSpan(),
+                                        start,
+                                        end,
+                                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                                    )
+
+                                    else -> {}
+                                }
+                            }
+
+                            MarkdownElementType.Paragraph -> {
                                 listItemText.appendStyled(
                                     currentElement.text,
                                     MarkdownElementType.Paragraph
                                 )
+                            }
 
-                            MarkdownElementType.Image -> imageForListItem =
-                                MarkdownRenderItem.Image(
+                            MarkdownElementType.Image -> {
+                                imageForListItem = MarkdownRenderItem.Image(
                                     url = currentElement.params["src"].orEmpty(),
                                     alt = currentElement.text.takeIf(
                                         String::isNotBlank
                                     )
                                 )
+                            }
 
-                            else -> {}
+                            MarkdownElementType.ListItem -> {
+                                val start = listItemText.length
+                                listItemText.append(currentElement.text)
+                                val end = listItemText.length
+
+                                when (currentElement.params["origStyle"]) {
+                                    "Bold" -> listItemText.setSpan(
+                                        StyleSpan(Typeface.BOLD),
+                                        start,
+                                        end,
+                                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                                    )
+
+                                    "Italic" -> listItemText.setSpan(
+                                        StyleSpan(Typeface.ITALIC),
+                                        start,
+                                        end,
+                                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                                    )
+
+                                    "Strikethrough" -> listItemText.setSpan(
+                                        StrikethroughSpan(),
+                                        start,
+                                        end,
+                                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                                    )
+                                }
+                            }
+
+                            else -> {
+                                listItemText.append(currentElement.text)
+                            }
                         }
+
                         elementIndex++
                     }
 
